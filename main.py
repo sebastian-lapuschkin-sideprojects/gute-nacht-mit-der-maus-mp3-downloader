@@ -28,7 +28,7 @@ SITE_URLS = {'gutenacht':'https://www.wdrmaus.de/hoeren/gute_nacht_mit_der_maus.
             }
 
 @click.command()
-@click.option('--content', '-c', default='gutenacht'    , help="What is the target content to download? pick 'gutenacht' (default) for 'Gute Nacht mit der Maus', 'hoerspiel' for 'Maus Hörspiel', i.e. stories etc, 'podcast' for a full hour Maus podcast or 'musik' for content all about music. This content selection will create a correspondingly named folder in your choice of output directory.")
+@click.option('--content', '-c', default='gutenacht'    , help="What is the target content to download? pick 'gutenacht' (default) for 'Gute Nacht mit der Maus', 'hoerspiel' for 'Maus Hoerspiel', i.e. stories etc, 'podcast' for a full hour Maus podcast or 'musik' for content all about music. This content selection will create a correspondingly named folder in your choice of output directory.")
 @click.option('--browser', '-b', default='chrome'       , help="Which browser to use for? Pick between 'firefox' and 'chrome'.")
 @click.option('--waittime','-w', default=10             , help="Time to allow the browser to request resources and render.")
 @click.option('--output',  '-o' , default='.'           , help="The output directory to create (if required) and write the discovered files into.")
