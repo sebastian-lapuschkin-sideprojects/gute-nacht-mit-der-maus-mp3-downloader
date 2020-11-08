@@ -18,7 +18,6 @@ class Mp3DownloadParser(HTMLParser):
         if tag == 'a' and ('class', 'mp3dl') in attrs:
             self.mp3_links.extend([v for k,v in attrs if k == 'href'])
 
-# packages: chrome-driver for chrome/chromium-browser, geckodriver for firefox
 # modules: selenium, click
 # for fun maybe termcolor, tqdm and tctim for fun?
 
