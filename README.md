@@ -34,7 +34,9 @@ Everything is pretty straight forward:
   Options:
     -c, --content TEXT      What is the target content to download? pick
                           'gutenacht' (default) for 'Gute Nacht mit der Maus'
-                          or 'hoerspiel' for 'Maus Hörspiel'.
+                          or 'hoerspiel' for 'Maus Hörspiel'. The content
+                          switch will create a correspondingly named folder in
+                          your choice of output directory.
     -b, --browser TEXT      Which browser to use for? Pick between 'firefox' and
                           'chrome'.
     -w, --waittime INTEGER  Time to allow the browser to request resources and
