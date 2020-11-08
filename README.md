@@ -1,7 +1,7 @@
 # Audio Play Download Automation of daily "Sendung mit der Maus" content
 My son loves the Sendung mit der Maus, and so do I (since my early childhood, in fact).
 The [Sendung mit der Maus](https://www.wdrmaus.de/) is an excellent series of educational and creative media published by the [Westdeutsche Rundfink Köln (WDR)](https://www.wdr.de).
-The format appears weekly on Television since 1971 and for Streaming.
+The format appears weekly on Television since 1971 and as a Stream.
 Since the COVID-19 pandemic of 2020, there is also a daily series of freely streamable and as mp3 file downloadable daily audio plays.
 
 For some weird reason however, in germany publicly funded and freely available media gets depublished after one week of online availability. In the past, I have tried to keep track of the newly published episodes, but some slipped between my fingers. I therefore set out to create this small automation tool (which can be run as a cron job, for example) to automatically collect and download any newly appearing mp3 audio files.
