@@ -1,7 +1,7 @@
 # gute-nacht-mit-der-maus-mp3-downloader
 Automation tool for downloading the daily "Gute Nacht mit der Maus" audio plays as mp3 file.
 
-## Installation
+## Installation on Debian-based systems
 For use with Firefox:
   ```
   sudo apt install -y firefox firefox-geckodriver
@@ -14,7 +14,7 @@ For use with Chrome/Chromium:
   
 Installing the required python packages
   ```
-  pip install -r requirements
+  pip install -r requirements.txt
   ```
   
 ## How to use
