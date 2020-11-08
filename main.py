@@ -74,10 +74,10 @@ def main(content, browser, waittime, output):
     for i, link in enumerate(parser.mp3_links):
         filename = '{}/{}'.format(outdir, os.path.basename(link))
         if os.path.isfile(filename):
-            cprint('({}/{}) Skipping {} (file exists in {})'.format(i, len(parser.mp3_links), link, outdir), attrs=['dark'])
+            cprint('({}/{}) Skipping {} (file exists in {})'.format(i+1, len(parser.mp3_links), link, outdir), attrs=['dark'])
 
         else:
-            print('({}/{}) Downloading {}...'.format(i, len(parser.mp3_links), link))
+            print('({}/{}) Downloading {}...'.format(i+1, len(parser.mp3_links), link))
             with open(filename, 'wb') as f:
                 f.write(requests.get(link, allow_redirects=True).content)
 
