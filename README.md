@@ -44,5 +44,3 @@ Everything is pretty straight forward:
     --help                  Show this message and exit.
   ```
 
-Consider running this as a cron job.
-
