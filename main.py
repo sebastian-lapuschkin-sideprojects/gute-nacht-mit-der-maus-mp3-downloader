@@ -27,6 +27,12 @@ SITE_URLS = {'gutenacht':'https://www.wdrmaus.de/hoeren/gute_nacht_mit_der_maus.
              'musik':'https://www.wdrmaus.de/hoeren/podcast_musik.php5'
             }
 
+STRIP_STR = {'gutenacht':'gutenachtmitdermaus_',
+             'hoerspiel':'maushoerspiel_',
+             'podcast':'diesendungmitdermauszumhoeren_',
+             'musik':'diesendungmitdermauszumhoerenmusik_'
+            }
+
 @click.command()
 @click.option('--content', '-c', default='gutenacht'    , help="What is the target content to download? pick 'gutenacht' (default) for 'Gute Nacht mit der Maus', 'hoerspiel' for 'Maus Hoerspiel', i.e. stories etc, 'podcast' for a full hour Maus podcast or 'musik' for content all about music. This content selection will create a correspondingly named folder in your choice of output directory.")
 @click.option('--browser', '-b', default='chrome'       , help="Which browser to use for? Pick between 'firefox' and 'chrome' (default).")
@@ -72,7 +78,13 @@ def main(content, browser, waittime, output):
 
     # download mp3 files and save
     for i, link in enumerate(parser.mp3_links):
-        filename = '{}/{}'.format(outdir, os.path.basename(link))
+        basename = os.path.basename(link)
+        # clean up filename (a bit)
+        if basename.startswith(STRIP_STR[content]):
+            basename = basename[len(STRIP_STR[content]):]
+        filename = '{}/{}'.format(outdir, basename)
+        print(filename)
+
         if os.path.isfile(filename):
             cprint('({}/{}) Skipping {} (file exists in {})'.format(i+1, len(parser.mp3_links), link, outdir), attrs=['dark'])
 
