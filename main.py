@@ -21,16 +21,17 @@ class Mp3DownloadParser(HTMLParser):
         if tag == 'a' and ('class', 'mp3dl') in attrs:
             self.mp3_links.extend([v for k,v in attrs if k == 'href'])
 
+
 SITE_URLS = {'gutenacht':'https://www.wdrmaus.de/hoeren/gute_nacht_mit_der_maus.php5',
              'hoerspiel':'https://www.wdrmaus.de/hoeren/hoerspiel.php5',
              'podcast':'https://www.wdrmaus.de/hoeren/podcast60.php5',
              'musik':'https://www.wdrmaus.de/hoeren/podcast_musik.php5'
             }
 
-STRIP_STR = {'gutenacht':'gutenachtmitdermaus_',
-             'hoerspiel':'maushoerspiel_',
-             'podcast':'diesendungmitdermauszumhoeren_',
-             'musik':'diesendungmitdermauszumhoerenmusik_'
+STRIP_STR = {'gutenacht':('gutenachtmitdermaus_',),
+             'hoerspiel':('maushoerspiel_',),
+             'podcast'  :('diesendungmitdermauszumhoeren_', 'diemauszumhoeren_',),
+             'musik'    :('diesendungmitdermauszumhoerenmusik_', 'diemauszumhoerenmusik_',),
             }
 
 @click.command()
@@ -78,12 +79,20 @@ def main(content, browser, waittime, output):
 
     # download mp3 files and save
     for i, link in enumerate(parser.mp3_links):
+        print()
+        # a link is a discovered mp3-download link. it containts the category names.
         basename = os.path.basename(link)
-        # clean up filename (a bit)
-        if basename.startswith(STRIP_STR[content]):
-            basename = basename[len(STRIP_STR[content]):]
+
+        # check if basename of file to download starts with any of the to be replaced strings and remove that gunk
+        for to_replace in STRIP_STR[content]:
+              if to_replace in basename:
+                  oldname = basename
+                  basename = basename.replace(to_replace, '')
+                  
+                  print('for', content, 'discovered:' , oldname, '-> downloading as:' , basename)
+        
         filename = '{}/{}'.format(outdir, basename)
-        print(filename)
+        print('    output location: ', filename)
 
         if os.path.isfile(filename):
             cprint('({}/{}) Skipping {} (file exists in {})'.format(i+1, len(parser.mp3_links), link, outdir), attrs=['dark'])
