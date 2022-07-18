@@ -19,7 +19,7 @@ for root, dirs, files in os.walk(".", topdown=False):
               if to_replace in name:
                   new = os.path.join(root, name.replace(to_replace, ''))
                   
-                  print(stripstr_category,' : ' , old, ' -> ' , new)
+                  print(stripstr_category, ':' , old, '->' , new)
                   if '-d' in sys.argv: print('    skipping renaming operation due to given command line parameter "-d", which executes a dry-run.')
                   else: os.rename(old, new)
                   break
