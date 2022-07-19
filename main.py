@@ -89,7 +89,7 @@ def main(content, browser, waittime, output):
                   oldname = basename
                   basename = basename.replace(to_replace, '')
                   
-                  print('for', content, 'discovered:' , oldname, '-> downloading as:' , basename)
+                  print('for', content, 'discovered:' , oldname, '-> target file path:' , basename)
         
         filename = '{}/{}'.format(outdir, basename)
         print('    output location: ', filename)
