@@ -98,7 +98,7 @@ def main(content, browser, waittime, output):
             cprint('({}/{}) Skipping {} (file exists in {})'.format(i+1, len(parser.mp3_links), link, outdir), attrs=['dark'])
 
         else:
-            print('({}/{}) Downloading {}...'.format(i+1, len(parser.mp3_links), link))
+            cprint('({}/{}) Downloading {}...'.format(i+1, len(parser.mp3_links), link), 'yellow')
             with open(filename, 'wb') as f:
                 f.write(requests.get(link, allow_redirects=True).content)
 
