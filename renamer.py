@@ -10,6 +10,7 @@ STRIP_STR = {'gutenacht':('gutenachtmitdermaus_',),
              'musik'    :('diesendungmitdermauszumhoerenmusik_', 'diemauszumhoerenmusik_',),
             }
 
+# strip away prepending strings
 for root, dirs, files in os.walk(".", topdown=False):
    for name in files:
       if os.path.basename(root) in STRIP_STR:
@@ -18,8 +19,21 @@ for root, dirs, files in os.walk(".", topdown=False):
           for to_replace in STRIP_STR[stripstr_category]:
               if to_replace in name:
                   new = os.path.join(root, name.replace(to_replace, ''))
-                  
+
                   print(stripstr_category, ':' , old, '->' , new)
                   if '-d' in sys.argv: print('    skipping renaming operation due to given command line parameter "-d", which executes a dry-run.')
                   else: os.rename(old, new)
                   break
+
+
+# strip away appending file name parts
+for root, dirs, files in os.walk(".", topdown=False):
+    for name in files:
+        if '_diemaus.mp3' in name:
+
+            old = os.path.join(root, name)
+            new = os.path.join(root, name.replace('_diemaus.mp3', '.mp3'))
+            print('in', root, ':' , old, '->' , new)
+
+            if '-d' in sys.argv: print('    skipping renaming operation due to given command line parameter "-d", which executes a dry-run.')
+            else: os.rename(old, new)
