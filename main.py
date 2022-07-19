@@ -87,7 +87,7 @@ def main(content, browser, waittime, output):
         for to_replace in STRIP_STR[content]:
               if to_replace in basename:
                   oldname = basename
-                  basename = basename.replace(to_replace, '')
+                  basename = basename.replace(to_replace, '').replace('_diemaus.mp3', '.mp3')
                   
                   print('for', content, 'discovered:' , oldname, '-> target file name:' , basename)
         
