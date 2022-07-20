@@ -8,6 +8,7 @@
 import os
 import glob
 import math
+import time
 import click
 import shutil
 import subprocess
@@ -55,6 +56,7 @@ def ffmpeg_apply_atempo(input_filename, output_filename, atempo):
 @click.argument('day',   nargs=1) # help="the day of choice. depending on the month, values within [1,31] make sense.")
 @click.option('--output',  '-o' , default='./toniefied'           , help="The output location of choice.")
 def main(year, month, day, output):
+    t_start = time.time()
 
     assert len(year) == 4, 'Four digit year string expected, but got "{}"'.format(year)
     assert int(year) > 0 , 'Year value should be a positive integer, but got "{}"'.format(year)
@@ -137,6 +139,8 @@ def main(year, month, day, output):
 
         print('Combined playback duration of generated outputs: {}h {}m {}s'.format(*add_durations(p_out_duration, m_out_duration)))
 
+    t_end = time.time()
+    print('Process finished after {:.2f}s'.format(t_end-t_start))
 
     # TODO NEXT: 
     # parallelize ffmpeg_apply_atempo : ffmpeg runs single-threadedly
