@@ -14,10 +14,13 @@ import shutil
 import subprocess
 
 
-def get_playback_duration(filename):
-    process  = subprocess.Popen(['ffprobe', '-i', '{}'.format(filename)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-    duration = [line.strip().split('Duration:')[1].split(',')[0].split(':') for line in process.stdout if 'Duration:' in line][0]
-    return duration
+def get_playback_duration(*filenames):
+    durations = []
+    for filename in filenames:
+        process  = subprocess.Popen(['ffprobe', '-i', '{}'.format(filename)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        duration = [line.strip().split('Duration:')[1].split(',')[0].split(':') for line in process.stdout if 'Duration:' in line][0]
+        durations.append(duration)
+    return durations
 
 def format_duration(duration):
     # convert over-seconds and minutes to minutes and hours
@@ -40,11 +43,22 @@ def ensure_directory(dirname):
         print('Creating output directory "{}"'.format(dirname))
         os.makedirs(dirname)
 
-def ffmpeg_apply_atempo(input_filename, output_filename, atempo):
-    #TODO convert to function to batch-process multiple input/output pairs?
-    cmd = ['ffmpeg', '-y', '-i', input_filename, '-af', 'atempo={}'.format(atempo), output_filename]
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-    [line for line in process.stdout] # this is needed here to wait for process to exhaust its output pipe and (properly) finish the conversion process.
+def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
+    processes = []
+    #asynchronously process input/output filename pairs
+    for io in io_filenames:
+        input_filename, output_filename = io
+        print('    using ffmpeg to process {} ... (this may take a while)'.format(os.path.basename(input_filename)))
+
+        cmd = ['ffmpeg', '-y', '-i', input_filename, '-af', 'atempo={}'.format(atempo), output_filename]
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        processes.append(process)
+
+    # wait for the started processes to finish
+    for process in processes:
+        process.wait()
+        # for some reason the stdout of each process needs to be iterated to not break the terminal functionality
+        [line for line in process.stdout]
 
 
 @click.command(help='(1) Takes the podcast and music mp3 files corresponding to a given date string (which usually are topically aligned),\n\
@@ -66,7 +80,7 @@ def main(year, month, day, output):
 
     assert 0 < len(day) <= 2,   'One or two digit day string expected, but got "{}"'.format(day)
     assert 1 <= int(month) <= 31, 'Day value should be positive integer within range [1,31] (depending on month), but got "{}"'.format(day)
-    
+
     # year is required to be four-digit. keep as is
     # ensure leading zeroes for month and day
     datestring = '{year}-{month:02d}-{day:02d}'.format(year=year, month=int(month), day=int(day))
@@ -87,7 +101,7 @@ def main(year, month, day, output):
         music   = music[0]
         print('    podcast file:', podcast)
         print('    music file:  ', music)
-    
+
     elif 0 in [n_pod, n_mus]:
         print('Could not satisfy search query for datestring "{}". At least one category did not find a match:'.format(datestring))
         print('    returned podcast files:', podcast)
@@ -98,8 +112,7 @@ def main(year, month, day, output):
     # matching files found with success, paths stored in "music" and "podcast"
     # now use ffmpeg and ffprobe to read file information and process file
     # get duratin as a list if [hours, minutes, seconds]
-    p_duration = get_playback_duration(podcast)
-    m_duration = get_playback_duration(music)
+    p_duration, m_duration = get_playback_duration(podcast, music)
     print('Podcast duration: {}h {}m {}s'.format(*p_duration))
     print('Music duration: {}h {}m {}s'.format(*m_duration))
 
@@ -107,13 +120,12 @@ def main(year, month, day, output):
     c_duration = add_durations(p_duration, m_duration)
     print('Combined duration: ~ {}h {}m {}s'.format(*c_duration))
 
-    # internally, now convert all to minutes in order to infer the playback speed scaling factor
-
+    # now convert all to minutes in order to infer the playback speed scaling factor
     minutes_total = duration_to_minutes(c_duration)
-    atempo = math.ceil(minutes_total/90 * 1000)/1000 # ceil to second decimal digit of playback speed percentage percentage 
+    atempo = math.ceil(minutes_total/90 * 1000)/1000 # ceil to second decimal digit of playback speed percentage percentage
 
     print('Total time in minutes: {:.2f}m'.format(minutes_total), '-> atempo for ffmpeg:', atempo)
-    
+
     ensure_directory(output)
     if atempo <= 1:
         print('    that means playback speed would be REDUCED by {:.2f}%.'.format((1-atempo)*100))
@@ -122,18 +134,15 @@ def main(year, month, day, output):
         shutil.copy(music, output)
     else:
         print('    that means playback speed will be INCREASED by {:.2f}%.'.format((atempo-1)*100))
-        
-        print('    using ffmpeg to process {} ... (this may take a while)'.format(os.path.basename(podcast)))
+
         p_out = '{}/{}'.format(output, os.path.basename(podcast.replace('.mp3', '_tonified.mp3')))
-        ffmpeg_apply_atempo(podcast, p_out, atempo)
-        p_out_duration = get_playback_duration(p_out)
+        m_out = '{}/{}'.format(output, os.path.basename(music.replace('.mp3', '_tonified.mp3')))
+
+        ffmpeg_apply_atempo((podcast, p_out), (music, m_out), atempo=atempo)
+        p_out_duration, m_out_duration = get_playback_duration(p_out, m_out)
+
         print('        output file written to {}'.format(p_out))
         print('        playback duration:{}h {}m {}s'.format(*p_out_duration))
-
-        print('    using ffmpeg to process {} ... (this may take a while)'.format(os.path.basename(music)))
-        m_out = '{}/{}'.format(output, os.path.basename(music.replace('.mp3', '_tonified.mp3')))
-        ffmpeg_apply_atempo(music, m_out, atempo)
-        m_out_duration = get_playback_duration(m_out)
         print('        output file written to {}'.format(m_out))
         print('        playback duration:{}h {}m {}s'.format(*m_out_duration))
 
@@ -141,10 +150,6 @@ def main(year, month, day, output):
 
     t_end = time.time()
     print('Process finished after {:.2f}s'.format(t_end-t_start))
-
-    # TODO NEXT: 
-    # parallelize ffmpeg_apply_atempo : ffmpeg runs single-threadedly
-
 
 
 
