@@ -57,8 +57,8 @@ Options:
 
 ## Toniebox-readification
 
-The daily podcast and music episodes are thematically aligned and of roughly 60 and 30 minutes of duration, respectively. If you own a [Toniebox](https://tonies.com/) with a [Creative Tonie](https://tonies.com/en-gb/creative-tonies/), which comes with 90 minutes of capacity to play back custom content, you can conveniently select (and slightly preprocess) a podcast with matching musical content using [tonify.py](./tonify.py).
-Since together the podcast and music files of a day of choice typically slightly exceed the 90 minute capacity of the Creative Tonie, [tonify.py](./tonify.py) infers the minimal required increase in playback speed and then uses [ffmpeg](https://ffmpeg.org/) to process the files to not exceed the figurine's capacity when uploaded together. Note that in order to use this script, [ffmpeg](https://ffmpeg.org/) needs to be installed on the executing device. In case you are running a debian-based linux distro, just run
+The daily podcast and music episodes are thematically aligned and of roughly 60 and 30 minutes of duration, respectively. If you own a [Toniebox](https://tonies.com/) with a [Creative Tonie](https://tonies.com/en-gb/creative-tonies/), which comes with 90 minutes of capacity to play back custom content, you can conveniently select (and slightly preprocess) a podcast with matching musical content using [toniefy.py](./toniefy.py).
+Since together the podcast and music files of a day of choice typically slightly exceed the 90 minute capacity of the Creative Tonie, [toniefy.py](./toniefy.py) infers the minimal required increase in playback speed and then uses [ffmpeg](https://ffmpeg.org/) to process the files to not exceed the figurine's capacity when uploaded together. Note that in order to use this script, [ffmpeg](https://ffmpeg.org/) needs to be installed on the executing device. In case you are running a debian-based linux distro, just run
 
 ```
 sudo apt install -y ffmpeg
