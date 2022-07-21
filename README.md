@@ -19,7 +19,7 @@ For use with Chrome/Chromium:
   sudo apt install -y chromium-browser chromium-chromedriver
   ```
 
-Installing the required python packages
+Installing the required python (3.7 or above) packages
   ```
   pip install -r requirements.txt
   ```
