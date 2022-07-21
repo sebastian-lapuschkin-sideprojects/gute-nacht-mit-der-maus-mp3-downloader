@@ -1,4 +1,4 @@
-# Audio Play Download Automation of daily "Sendung mit der Maus" content
+# Download automation of daily "Sendung mit der Maus" audio content
 My son loves the Sendung mit der Maus, and so do I (since my early childhood, in fact).
 The [Sendung mit der Maus](https://www.wdrmaus.de/) is an excellent series of educational and creative media published by the [Westdeutsche Rundfink Köln (WDR)](https://www.wdr.de).
 The format appears weekly on Television since 1971 and as a Stream.
@@ -24,7 +24,7 @@ Installing the required python packages
   pip install -r requirements.txt
   ```
 
-Optional (for the use of [toniefy.py](./toniefy.py). See below])
+Optional (for the use of [toniefy.py](./toniefy.py). See below)
   ```
   sudo apt install -y ffmpeg
   ```
