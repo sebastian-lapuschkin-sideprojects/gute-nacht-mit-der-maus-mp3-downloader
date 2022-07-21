@@ -24,10 +24,14 @@ Installing the required python packages
   pip install -r requirements.txt
   ```
 
+Optional (for the use of [toniefy.py](./toniefy.py). See below])
+  ```
+  sudo apt install -y ffmpeg
+  ```
+
 ## How to use
 
-Everything is pretty straight forward:
-First, install the requiredments with `pip install -r requiements.txt` on a Python 3.7+ environment. Then just follow the documentation:
+Everything is pretty straight forward, if you follow the documentation:
 
   ```
   $python main.py --help
@@ -58,13 +62,9 @@ Options:
 ## Toniebox-readification
 
 The daily podcast and music episodes are thematically aligned and of roughly 60 and 30 minutes of duration, respectively. If you own a [Toniebox](https://tonies.com/) with a [Creative Tonie](https://tonies.com/en-gb/creative-tonies/), which comes with 90 minutes of capacity to play back custom content, you can conveniently select (and slightly preprocess) a podcast with matching musical content using [toniefy.py](./toniefy.py).
-Since together the podcast and music files of a day of choice typically slightly exceed the 90 minute capacity of the Creative Tonie, [toniefy.py](./toniefy.py) infers the minimal required increase in playback speed and then uses [ffmpeg](https://ffmpeg.org/) to process the files to not exceed the figurine's capacity when uploaded together. Note that in order to use this script, [ffmpeg](https://ffmpeg.org/) needs to be installed on the executing device. In case you are running a debian-based linux distro, just run
+Since together the podcast and music files of a day of choice typically slightly exceed the 90 minute capacity of the Creative Tonie, [toniefy.py](./toniefy.py) infers the minimal required increase in playback speed and then uses [ffmpeg](https://ffmpeg.org/) to process the files to not exceed the figurine's capacity when uploaded together. Note that in order to use this script, [ffmpeg](https://ffmpeg.org/) needs to be installed on the executing device (see installation instructions above.)
 
-```
-sudo apt install -y ffmpeg
-```
-
-and then follow the instructions, by providing the YEAR, MONTH and DAY corresponding to the publication of your previously downloaded Maus-episodes as digits. The script will output processed mp3-files to a (default) location (of choice) which can then be uploaded to the Tonie via your Toniebox-account.
+Follow the instructions, by providing the YEAR, MONTH and DAY corresponding to the publication of your previously with [main.py](./main.py) downloaded Maus-episodes as digits. The script will output processed mp3-files to a (default) location (of choice) which can then be uploaded to the Tonie via your Toniebox-account.
 
 ```
 Usage: toniefy.py [OPTIONS] YEAR MONTH DAY
