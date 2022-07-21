@@ -35,7 +35,7 @@ STRIP_STR = {'gutenacht':('gutenachtmitdermaus_',),
             }
 
 @click.command()
-@click.option('--content', '-c', default='gutenacht'    , help="What is the target content to download? pick 'gutenacht' (default) for 'Gute Nacht mit der Maus', 'hoerspiel' for 'Maus Hoerspiel', i.e. stories etc, 'podcast' for a full hour Maus podcast or 'musik' for content all about music. This content selection will create a correspondingly named folder in your choice of output directory.")
+@click.option('--content', '-c', default='gutenacht'    , help="What is the target content to download? pick 'gutenacht' (default) for 'Gute Nacht mit der Maus', 'hoerspiel' for 'Maus Hoerspiel', i.e. stories etc, 'podcast' for a full hour Maus podcast (i.e. the listen-only-equivalent of the regular weekly 'Sending mit der Maus' episodes on TV or Stream, or 'musik' for content all about music. This content selection will create a correspondingly named folder in your choice of output directory.")
 @click.option('--browser', '-b', default='chrome'       , help="Which browser to use for? Pick between 'firefox' and 'chrome' (default).")
 @click.option('--waittime','-w', default=10             , help="Time in seconds to allow the browser to request resources and render. Default wait time is 10 seconds.")
 @click.option('--output',  '-o' , default='.'           , help="The output directory to create (if required) and write the discovered files into. Default output directory is '.'.")
@@ -88,9 +88,9 @@ def main(content, browser, waittime, output):
               if to_replace in basename:
                   oldname = basename
                   basename = basename.replace(to_replace, '').replace('_diemaus.mp3', '.mp3')
-                  
+
                   print('for', content, 'discovered:' , oldname, '-> target file name:' , basename)
-        
+
         filename = '{}/{}'.format(outdir, basename)
         print('    output location: ', filename)
 

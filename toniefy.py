@@ -1,6 +1,6 @@
 """
 (1) Takes the podcast and music mp3 files corresponding to a given date string (which usually are topically aligned),
-(2) measures their length in time (slightly over 90 minutes in length when added up)
+(2) measures their length in time (usually slightly over 90 minutes in length when added up)
 (3) and then uses ffmpeg to change playback speed to get just under 90 minutes of play time.
 (4) the end result can then be uploaded conveniently to a "Creative-Tonie" (with 90min capacity) for Toniebox-playback. see https://tonies.com/en-gb/creative-tonies/
 """
@@ -62,7 +62,7 @@ def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
 
 
 @click.command(help='(1) Takes the podcast and music mp3 files corresponding to a given date string (which usually are topically aligned),\n\
-                     (2) measures their length in time (slightly over 90 minutes in length when added up)\n\
+                     (2) measures their length in time (usually slightly over 90 minutes in length when added up)\n\
                      (3) and then uses ffmpeg to change playback speed to get just under 90 minutes of play time.\n\
                      (4) the end result can then be uploaded conveniently to a "Creative-Tonie" (with 90min capacity) for Toniebox-playback. see https://tonies.com/en-gb/creative-tonies/')
 @click.argument('year',  nargs=1) # help="the year of the datestring part for identifying the podcast and music mp3 files of choice. depending on the regularity and intensity of your data crawling, values between 2020 and [the current year] might make sense.")
