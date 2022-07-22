@@ -68,8 +68,9 @@ def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
 @click.argument('year',  nargs=1) # help="the year of the datestring part for identifying the podcast and music mp3 files of choice. depending on the regularity and intensity of your data crawling, values between 2020 and [the current year] might make sense.")
 @click.argument('month', nargs=1) # help="the month part. values within [1,12] make sense.")
 @click.argument('day',   nargs=1) # help="the day of choice. depending on the month, values within [1,31] make sense.")
-@click.option('--output',  '-o' , default='./toniefied'           , help="The output location of choice.")
-def main(year, month, day, output):
+@click.option('--output',     '-o', default='./toniefied'   , help='The output location of choice. Default is "./toniefied" ')
+@click.option('--sourcedir',  '-s', default='.'             , help='The source directory in which to scan for content. Default is "."')
+def main(year, month, day, output, sourcedir):
     t_start = time.time()
 
     assert len(year) == 4, 'Four digit year string expected, but got "{}"'.format(year)
@@ -87,8 +88,8 @@ def main(year, month, day, output):
     print('Looking for podcast and music mp3 files with datestring "{}"'.format(datestring))
 
     # look for matching files
-    podcast  = glob.glob('./podcast/{}*'.format(datestring))
-    music    = glob.glob('./musik/{}*'.format(datestring))
+    podcast  = glob.glob('{}/podcast/{}*'.format(sourcedir, datestring))
+    music    = glob.glob('{}/musik/{}*'.format(sourcedir, datestring))
 
     n_pod = len(podcast)
     n_mus = len(music)
