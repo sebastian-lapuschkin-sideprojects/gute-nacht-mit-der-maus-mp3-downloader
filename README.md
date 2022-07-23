@@ -69,19 +69,21 @@ Follow the instructions, by providing the YEAR, MONTH and DAY corresponding to t
 ```
 Usage: toniefy.py [OPTIONS] YEAR MONTH DAY
 
-  (1) Takes the podcast and music mp3 files corresponding to a given
-  date string (which usually are topically aligned), (2) measures their
-  length in time (usually slightly over 90 minutes in length when added
-  up) (3) and then uses ffmpeg to change playback speed to get just
-  under 90 minutes of play time. (4) the end result can then be uploaded
-  conveniently to a "Creative-Tonie" (with 90min capacity) for Toniebox-
-  playback. see https://tonies.com/en-gb/creative-tonies/
+  (1) Takes the podcast and music mp3 files corresponding to a given date
+  string (which usually are topically aligned), (2) measures their length in
+  time (usually slightly over 90 minutes in length when added up) (3) and then
+  uses ffmpeg to change playback speed to get just under 90 minutes of play
+  time. (4) the end result can then be uploaded conveniently to a "Creative-
+  Tonie" (with 90min capacity) for Toniebox-playback. see
+  https://tonies.com/en-gb/creative-tonies/
 
 Options:
   -o, --output TEXT     The output location of choice. Default is
                         "./toniefied"
   -s, --sourcedir TEXT  The source directory in which to scan for content.
                         Default is "."
+  -d, --discover_only   If specified, discovered source file stats will be
+                        displayed, but no output will be generated.
   --help                Show this message and exit.
 ```
 

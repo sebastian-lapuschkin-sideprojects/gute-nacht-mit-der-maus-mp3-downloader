@@ -70,7 +70,8 @@ def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
 @click.argument('day',   nargs=1) # help="the day of choice. depending on the month, values within [1,31] make sense.")
 @click.option('--output',     '-o', default='./toniefied'   , help='The output location of choice. Default is "./toniefied" ')
 @click.option('--sourcedir',  '-s', default='.'             , help='The source directory in which to scan for content. Default is "."')
-def main(year, month, day, output, sourcedir):
+@click.option('--discover_only',   '-d', is_flag='True'          , help='If specified, discovered source file stats will be displayed, but no output will be generated.')
+def main(year, month, day, output, sourcedir, discover_only):
     t_start = time.time()
 
     assert len(year) == 4, 'Four digit year string expected, but got "{}"'.format(year)
@@ -126,6 +127,9 @@ def main(year, month, day, output, sourcedir):
     atempo = math.ceil(minutes_total/90 * 1000)/1000 # ceil to second decimal digit of playback speed percentage percentage
 
     print('Total time in minutes: {:.2f}m'.format(minutes_total), '-> atempo for ffmpeg:', atempo)
+
+    # exit here as if script is run in --discover mode, as below code will generate outputs
+    if discover_only: exit()
 
     ensure_directory(output)
     if atempo <= 1:
