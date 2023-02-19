@@ -43,14 +43,28 @@ def ensure_directory(dirname):
         print('Creating output directory "{}"'.format(dirname))
         os.makedirs(dirname)
 
+def generate_tmp_filename(filename):
+    # basically just prepends a leading dot '.' to the name of the file in the path.
+    dirname = os.path.dirname(filename)
+    basename = os.path.basename(filename)
+    return os.path.join(dirname, '.'+basename)
+
 def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
     processes = []
-    #asynchronously process input/output filename pairs
+    tmp_to_target_filenamepairs = [] #ugh horrible name. a list of tuples
+
+    # asynchronously process input/output filename pairs
     for io in io_filenames:
         input_filename, output_filename = io
+        
+        # tmp filename to prevent conflicts due to automatic and partial syncs, eg via nextcloud, before processing is finished.
+        # remember those pairs for renaming after everything is done
+        tmp_output_filename = generate_tmp_filename(output_filename)
+        tmp_to_target_filenamepairs.append((tmp_output_filename, output_filename))
+
         print('    using ffmpeg to process {} ... (this may take a while)'.format(os.path.basename(input_filename)))
 
-        cmd = ['ffmpeg', '-y', '-i', input_filename, '-af', 'atempo={}'.format(atempo), output_filename]
+        cmd = ['ffmpeg', '-y', '-i', input_filename, '-af', 'atempo={}'.format(atempo), tmp_output_filename]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         processes.append(process)
 
@@ -59,6 +73,10 @@ def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
         process.wait()
         # for some reason the stdout of each process needs to be iterated to not break the terminal functionality
         [line for line in process.stdout]
+
+    # after everything is done, rename the target files by
+    for src, dst in tmp_to_target_filenamepairs:
+        shutil.move(src, dst)
 
 
 @click.command(help='(1) Takes the podcast and music mp3 files corresponding to a given date string (which usually are topically aligned),\n\
