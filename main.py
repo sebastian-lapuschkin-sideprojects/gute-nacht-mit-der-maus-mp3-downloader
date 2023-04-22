@@ -31,7 +31,7 @@ SITE_URLS = {'gutenacht':'https://www.wdrmaus.de/hoeren/gute_nacht_mit_der_maus.
 STRIP_STR = {'gutenacht':('gutenachtmitdermaus_',),
              'hoerspiel':('maushoerspiel_',),
              'podcast'  :('diesendungmitdermauszumhoeren_', 'diemauszumhoeren_',),
-             'musik'    :('diesendungmitdermauszumhoerenmusik_', 'diemauszumhoerenmusik_',),
+             'musik'    :('diesendungmitdermauszumhoerenmusik_', 'diemauszumhoerenmusik_','mausmixdeinemusikwuensche_'),
             }
 
 @click.command()
