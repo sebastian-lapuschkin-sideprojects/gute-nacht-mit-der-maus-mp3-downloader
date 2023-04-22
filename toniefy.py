@@ -108,8 +108,8 @@ def main(year, month, day, output, sourcedir, discover_only):
     print('Looking for podcast and music mp3 files with datestring "{}"'.format(datestring))
 
     # look for matching files
-    podcast  = glob.glob('{}/podcast/{}*'.format(sourcedir, datestring))
-    music    = glob.glob('{}/musik/{}*'.format(sourcedir, datestring))
+    podcast  = glob.glob('{}/podcast/*{}*'.format(sourcedir, datestring))
+    music    = glob.glob('{}/musik/*{}*'.format(sourcedir, datestring))
 
     n_pod = len(podcast)
     n_mus = len(music)
