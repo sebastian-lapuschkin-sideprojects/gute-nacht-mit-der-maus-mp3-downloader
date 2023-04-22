@@ -65,6 +65,7 @@ def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
         print('    using ffmpeg to process {} ... (this may take a while)'.format(os.path.basename(input_filename)))
 
         cmd = ['ffmpeg', '-y', '-i', input_filename, '-af', 'atempo={}'.format(atempo), tmp_output_filename]
+        print('    executing: "{}"'.format(' '.join(cmd)))
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         processes.append(process)
 
