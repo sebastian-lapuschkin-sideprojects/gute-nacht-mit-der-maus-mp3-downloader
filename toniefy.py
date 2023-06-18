@@ -84,13 +84,14 @@ def ffmpeg_apply_atempo(*io_filenames, atempo=1.0):
                      (2) measures their length in time (usually slightly over 90 minutes in length when added up)\n\
                      (3) and then uses ffmpeg to change playback speed to get just under 90 minutes of play time.\n\
                      (4) the end result can then be uploaded conveniently to a "Creative-Tonie" (with 90min capacity) for Toniebox-playback. see https://tonies.com/en-gb/creative-tonies/')
-@click.argument('year',  nargs=1) # help="the year of the datestring part for identifying the podcast and music mp3 files of choice. depending on the regularity and intensity of your data crawling, values between 2020 and [the current year] might make sense.")
-@click.argument('month', nargs=1) # help="the month part. values within [1,12] make sense.")
-@click.argument('day',   nargs=1) # help="the day of choice. depending on the month, values within [1,31] make sense.")
+@click.argument('year',  nargs=1, default="2023") # help="the year of the datestring part for identifying the podcast and music mp3 files of choice. depending on the regularity and intensity of your data crawling, values between 2020 and [the current year] might make sense.")
+@click.argument('month', nargs=1, default="01") # help="the month part. values within [1,12] make sense.")
+@click.argument('day',   nargs=1, default="01") # help="the day of choice. depending on the month, values within [1,31] make sense.")
+@click.option('--explicit', '-x', default=[], multiple=True, help='Here you can pass (multiple) explicit file tpaths for toniefication.')
 @click.option('--output',     '-o', default='./toniefied'   , help='The output location of choice. Default is "./toniefied" ')
 @click.option('--sourcedir',  '-s', default='.'             , help='The source directory in which to scan for content. Default is "."')
 @click.option('--discover_only',   '-d', is_flag='True'          , help='If specified, discovered source file stats will be displayed, but no output will be generated.')
-def main(year, month, day, output, sourcedir, discover_only):
+def main(year, month, day, output, sourcedir, discover_only, explicit):
     t_start = time.time()
 
     assert len(year) == 4, 'Four digit year string expected, but got "{}"'.format(year)
@@ -111,9 +112,17 @@ def main(year, month, day, output, sourcedir, discover_only):
     podcast  = glob.glob('{}/podcast/*{}*'.format(sourcedir, datestring))
     music    = glob.glob('{}/musik/*{}*'.format(sourcedir, datestring))
 
+    if len(explicit) > 0:
+        # TODO: THIS SOLUTION (also see --explicit parameter devined above) TO TONIEFY A PAIR OF ARBITRARY FILES IS YANKY AS HECK. I HATE IT, BUT IT WILL HAVE TO DO FOR NOW. WAS NEEDED ON SHORT NOTICE:
+        print('IGNORING FILES FOUND BY DATE AND TRYING TO USE THESE EXPLICITLY PASSED FILES INSTEAD:', explicit)
+        podcast = [e for e in explicit if 'podcast' in e]
+        music = [e for e in explicit if 'musik' in e]
+
     n_pod = len(podcast)
     n_mus = len(music)
     print('Found {} podcasts and {} music files with given datestring'.format(n_pod, n_mus))
+
+
 
     if n_pod >= 1 and n_mus >= 1: # all good.
         #select files
