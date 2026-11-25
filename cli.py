@@ -49,14 +49,16 @@ def convert(args):
     selected = [found[i] for i in ids]
     os.makedirs(args.output, exist_ok=True)
 
-    sources, seconds = [], 0
+    sources, seconds, formats = [], 0, []
     for e in selected:
         source = os.path.join(args.output, '.source-{}.mp3'.format(e['id']))
         print('downloading', e['title'], '...')
         with open(source, 'wb') as f:
             f.write(fetch(e['url']))
         sources.append(source)
-        seconds += maus.duration_from_log(ffmpeg(['-hide_banner', '-i', source]))
+        log = ffmpeg(['-hide_banner', '-i', source])
+        seconds += maus.duration_from_log(log)
+        formats.append(maus.audio_format(log))
 
     f = maus.factor(seconds, len(selected), measured=True)
     print('together {}: {}'.format(maus.clock(seconds), maus.verdict(f)[1]))
@@ -66,10 +68,13 @@ def convert(args):
     parts = []
     for number, (e, source) in enumerate(zip(selected, sources), 1):
         part = os.path.join(args.output, maus.file_name(e, number))
-        print('converting', os.path.basename(part), '...')
-        ffmpeg(maus.convert_args(source, part, f, e))
+        if f == 1 and (not args.single or maus.joinable(formats)):
+            os.replace(source, part)      # fits as it is: nothing to convert, only renamed (and joined below)
+        else:
+            print('converting', os.path.basename(part), '...')
+            ffmpeg(maus.convert_args(source, part, f, e))
+            os.remove(source)
         parts.append(part)
-        os.remove(source)
 
     if args.single:
         mix = os.path.join(args.output, maus.mix_name(selected))

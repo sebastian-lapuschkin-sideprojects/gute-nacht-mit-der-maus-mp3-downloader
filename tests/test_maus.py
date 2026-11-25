@@ -51,6 +51,16 @@ class TestText(unittest.TestCase):
         self.assertAlmostEqual(maus.time_from_log('size=  1024KiB time=00:12:34.56 bitrate=128.0kbits/s'), 754.56)
         self.assertIsNone(maus.duration_from_log('nothing'))
 
+    def test_formats(self):
+        log128 = '  Stream #0:0: Audio: mp3 (mp3float), 48000 Hz, stereo, fltp, 128 kb/s, start 0.023021\n'
+        log160 = '  Stream #0:0: Audio: mp3 (mp3float), 48000 Hz, stereo, fltp, 160 kb/s\n'
+        log44 = '  Stream #0:0: Audio: mp3 (mp3float), 44100 Hz, stereo, fltp, 128 kb/s\n'
+        self.assertEqual(maus.audio_format(log128), ('mp3', '48000', 'stereo'))
+        self.assertTrue(maus.joinable([maus.audio_format(log128), maus.audio_format(log160)]))
+        self.assertFalse(maus.joinable([maus.audio_format(log128), maus.audio_format(log44)]))
+        self.assertFalse(maus.joinable([maus.audio_format(log128), None]))
+        self.assertFalse(maus.joinable([]))
+
 
 class TestEpisodes(unittest.TestCase):
     def test_parse(self):

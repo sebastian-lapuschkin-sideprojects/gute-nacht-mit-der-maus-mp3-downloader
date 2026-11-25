@@ -142,7 +142,8 @@ def matches(episode, text, in_summary=False):
 
 def clean_summary(text):
     text = re.sub(r'\s+', ' ', text).strip()
-    return re.sub(r'^Die Maus zum Hören - Lach- und Sachgeschichten[.:] Heute: ', '', text)
+    # 'Die Maus zum Hören - Lach- und Sachgeschichten. Heute: mit ...' (also ': Heute mit ...') -> 'mit ...'
+    return re.sub(r'^Die Maus zum Hören - Lach- und Sachgeschichten[.:]?\s*(Heute:?\s*)?', '', text)
 
 
 def default_selection(found):
@@ -243,6 +244,18 @@ def duration_from_log(text):
     return int(h) * 3600 + int(m) * 60 + float(s)
 
 
+def audio_format(text):
+    # ('mp3', '48000', 'stereo') from ffmpeg's 'Stream #0:0: Audio: mp3 (mp3float), 48000 Hz, stereo, fltp, 128 kb/s'
+    match = re.search(r'Audio: (\w+)[^,]*, (\d+) Hz, ([\w.()]+)', text)
+    return match.groups() if match else None
+
+
+def joinable(formats):
+    # mp3 files with the same sample rate and channels can be joined as they are, without converting
+    # (different bitrates are fine: every mp3 frame says its own)
+    return bool(formats) and all(f is not None and f[0] == 'mp3' and f == formats[0] for f in formats)
+
+
 def time_from_log(line):
     # ffmpeg's progress lines contain 'time=00:12:34.56'
     match = re.search(r'time=\s*(\d+):(\d+):(\d+(?:\.\d+)?)', line)
@@ -272,8 +285,10 @@ def concat_list(names):
 
 
 def concat_args(list_file, target, title):
+    # join mp3 files without converting them (audio only: the WDR files also carry a cover picture)
     return ['-hide_banner', '-nostdin', '-y', '-f', 'concat', '-safe', '0', '-i', list_file,
-            '-c', 'copy', '-metadata', 'title=' + title, '-metadata', 'album=Die Maus auf dem Tonie', target]
+            '-map', '0:a', '-map_metadata', '-1', '-c', 'copy',
+            '-metadata', 'title=' + title, '-metadata', 'album=Die Maus auf dem Tonie', target]
 
 
 if __name__ == '__main__':
