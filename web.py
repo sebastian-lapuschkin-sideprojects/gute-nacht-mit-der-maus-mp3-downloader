@@ -469,6 +469,13 @@ async def convert_all(chosen, single, workers):
             progress(job['row'], 1, 'fertig ({})'.format(maus.clock(job['seconds'])), done=True)
         await join(workers[0], everything, 'source', chosen, seconds, join_row)
         return
+    if f == 1 and single:
+        # different sample rates or channels: mp3 files like that cannot simply be put one after the other
+        info = js.document.createElement('li')
+        info.className = 'info'
+        info.textContent = ('Die Folgen haben unterschiedliche Audioformate ({}). Sie werden deshalb einmal umgerechnet, '
+                            'das dauert etwas länger als das reine Zusammenfügen.'.format(maus.describe_formats(formats)))
+        el('progress').prepend(info)
 
     await asyncio.gather(*[convert_on(worker, share, f) for worker, share in zip(workers, jobs)])
     if not single:

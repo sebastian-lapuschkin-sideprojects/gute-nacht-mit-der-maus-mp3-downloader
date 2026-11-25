@@ -256,6 +256,16 @@ def joinable(formats):
     return bool(formats) and all(f is not None and f[0] == 'mp3' and f == formats[0] for f in formats)
 
 
+def describe_formats(formats):
+    # 'MP3 48 kHz stereo / MP3 44,1 kHz stereo': the different formats among the files
+    names = []
+    for f in formats:
+        name = '{} {} kHz {}'.format(f[0].upper(), german_number(int(f[1]) / 1000, 1).replace(',0', ''), f[2]) if f else 'unbekannt'
+        if name not in names:
+            names.append(name)
+    return ' / '.join(names)
+
+
 def time_from_log(line):
     # ffmpeg's progress lines contain 'time=00:12:34.56'
     match = re.search(r'time=\s*(\d+):(\d+):(\d+(?:\.\d+)?)', line)

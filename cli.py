@@ -65,6 +65,8 @@ def convert(args):
     if f > maus.MAX_FACTOR:
         sys.exit(1)
 
+    if f == 1 and args.single and not maus.joinable(formats):
+        print('the files differ in format ({}), so they get converted once before joining'.format(maus.describe_formats(formats)))
     parts = []
     for number, (e, source) in enumerate(zip(selected, sources), 1):
         part = os.path.join(args.output, maus.file_name(e, number))

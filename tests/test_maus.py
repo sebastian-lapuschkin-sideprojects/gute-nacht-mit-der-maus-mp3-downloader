@@ -60,6 +60,8 @@ class TestText(unittest.TestCase):
         self.assertFalse(maus.joinable([maus.audio_format(log128), maus.audio_format(log44)]))
         self.assertFalse(maus.joinable([maus.audio_format(log128), None]))
         self.assertFalse(maus.joinable([]))
+        self.assertEqual(maus.describe_formats([maus.audio_format(log128), maus.audio_format(log44), maus.audio_format(log160)]),
+                         'MP3 48 kHz stereo / MP3 44,1 kHz stereo')
 
 
 class TestEpisodes(unittest.TestCase):
