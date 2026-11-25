@@ -66,6 +66,16 @@
   </aside>
 </main>
 
+<nav class="jump" aria-label="springen">
+  <!-- up to the search, down to saving (icons in the style of Feather, MIT) -->
+  <button id="to-top" class="hide" data-action="top" title="nach oben zur Suche" aria-label="nach oben zur Suche">
+    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></button>
+  <button id="to-bottom" data-action="bottom" title="nach unten zum Speichern" aria-label="nach unten zum Speichern">
+    <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg><span id="jump-count" class="picked" hidden></span></button>
+</nav>
+
 <footer class="bottom"><div class="wrap">
   <p>Inoffizielles Fanprojekt, kein Angebot des WDR. Die Maus und der Elefant © WDR, die Bilder kommen direkt von
     <a href="https://www.wdrmaus.de/">wdrmaus.de</a>. Folgen: <a href="https://www.ardaudiothek.de/">ARD Audiothek</a> und WDR, für den privaten Gebrauch.</p>

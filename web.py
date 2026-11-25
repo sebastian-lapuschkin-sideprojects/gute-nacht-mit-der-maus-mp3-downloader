@@ -147,6 +147,7 @@ def render_episodes():
     box.indeterminate = 0 < picked < len(shown)
     el('all-label').textContent = ('alle {} angezeigten auswählen'.format(len(shown)) if len(shown) != 1
                                    else 'die angezeigte Folge auswählen')
+    on_scroll()         # the page may have become shorter or longer
 
 
 def render_selection():
@@ -161,7 +162,11 @@ def render_selection():
             '</span></li>'.format(
                 escape(e['title']), escape(maus.TITLES[e['series']]), maus.german_date(e['date']), maus.clock(e['duration']),
                 ' disabled' if n == 0 else '', ' disabled' if n == len(chosen) - 1 else '', id=e['id']))
-    el('selected').innerHTML = ''.join(rows) or '<li class="empty">Noch nichts ausgewählt: links Folgen anklicken.</li>'
+    el('selected').innerHTML = ''.join(rows) or '<li class="empty">Noch nichts ausgewählt: Folgen in der Liste anklicken.</li>'
+    count = el('jump-count')       # the number of selected episodes, also on the floating "down" button
+    count.textContent = str(len(chosen))
+    count.hidden = not chosen
+    el('to-bottom').title = 'ganz nach unten' + (' ({} ausgewählt)'.format(len(chosen)) if chosen else '')
 
     seconds = sum(e['duration'] for e in chosen)
     f = maus.factor(seconds, len(chosen))
@@ -178,7 +183,8 @@ def render_selection():
     button = el('convert')
     if not state['busy']:
         button.disabled = not chosen or f > maus.MAX_FACTOR
-        button.textContent = 'Herunterladen' if f == 1 and output_mode() == 'parts' else 'Umrechnen und herunterladen'
+        button.textContent = 'Herunterladen' if f == 1 else 'Umrechnen und herunterladen'     # (f == 1: only joined, if at all)
+    on_scroll()
 
 
 def on_click(event):
@@ -186,6 +192,10 @@ def on_click(event):
     if not target:
         return
     action, key = target.getAttribute('data-action'), target.getAttribute('data-id')   # (dataset.id raises if missing)
+    if action in ('top', 'bottom'):
+        top = 0 if action == 'top' else js.document.documentElement.scrollHeight
+        js.window.scrollTo(js_object({'top': top, 'behavior': 'smooth'}))
+        return
     if action == 'convert':
         asyncio.ensure_future(convert())
         return
@@ -233,6 +243,13 @@ def on_change(event):
         render_episodes()
 
 
+def on_scroll(event=None):
+    # the floating buttons: "up" once the page is scrolled a bit, "down" until its end is reached
+    y, seen, height = js.window.scrollY, js.window.innerHeight, js.document.documentElement.scrollHeight
+    el('to-top').classList.toggle('hide', y < 300)
+    el('to-bottom').classList.toggle('hide', y + seen > height - 120)
+
+
 def on_input(event):
     if event.target.id == 'search':
         state['query'] = event.target.value
@@ -244,6 +261,8 @@ async def start():
     js.document.addEventListener('click', create_proxy(on_click))
     js.document.addEventListener('change', create_proxy(on_change))
     js.document.addEventListener('input', create_proxy(on_input))
+    for name in ('scroll', 'resize'):
+        js.window.addEventListener(name, create_proxy(on_scroll), js_object({'passive': True}))
     el('episodes').innerHTML = '<li class="note">Die Folgenliste wird geladen ...</li>'
     try:
         response = await pyfetch(maus.query_url())
@@ -420,45 +439,56 @@ async def convert_all(chosen, single, workers):
         workers.extend(loaded)
         progress(ffmpeg_row, 1, 'bereit', done=True)
 
-    loading = asyncio.ensure_future(load(min(WORKERS, len(chosen))))
+    # a selection that fits as it is probably only needs joining: one ffmpeg is enough for that
+    fits = maus.factor(sum(e['duration'] for e in chosen), len(chosen)) == 1
+    loading = asyncio.ensure_future(load(1 if fits else min(WORKERS, len(chosen))))
     limit = asyncio.Semaphore(DOWNLOADS)
     datas = await asyncio.gather(*[download(e, n, limit) for n, e in enumerate(chosen)])
     await loading
 
-    # every file goes to one worker; there it gets measured exactly, then converted
+    # every file goes to one worker; there it gets measured exactly (length and format), then converted
     jobs = [[] for _ in workers]
-    seconds = 0
+    seconds, formats = 0, []
     for n, (e, data) in enumerate(zip(chosen, datas)):
         worker = workers[n % len(workers)]
         source = 'in{}.mp3'.format(n)
         await worker['ff'].writeFile(source, data)
-        measured = maus.duration_from_log((await run(worker, ['-hide_banner', '-i', source]))[1]) or e['duration']
+        log = (await run(worker, ['-hide_banner', '-i', source]))[1]
+        measured = maus.duration_from_log(log) or e['duration']
         seconds += measured
-        jobs[n % len(workers)].append({'row': n, 'episode': e, 'source': source, 'seconds': measured,
+        formats.append(maus.audio_format(log))
+        jobs[n % len(workers)].append({'row': n, 'episode': e, 'source': source, 'seconds': measured, 'worker': worker,
                                        'target': 'out{}.mp3'.format(n), 'name': maus.file_name(e, n + 1)})
     f = maus.factor(seconds, len(chosen), measured=True)
     el('verdict').textContent = maus.verdict(f)[1] + ' (gemessen: zusammen {})'.format(maus.clock(seconds))
-    await asyncio.gather(*[convert_on(worker, share, f) for worker, share in zip(workers, jobs)])
-
     everything = sorted((job for share in jobs for job in share), key=lambda job: job['row'])
-    if not single:
+
+    if f == 1 and single and maus.joinable(formats):
+        # nothing to convert: the WDR files are joined as they are, which takes seconds
         for job in everything:
-            worker = workers[job['row'] % len(workers)]
-            offer(job['name'], await worker['ff'].readFile(job['target']), maus.clock(job['seconds'] / f))
+            progress(job['row'], 1, 'fertig ({})'.format(maus.clock(job['seconds'])), done=True)
+        await join(workers[0], everything, 'source', chosen, seconds, join_row)
         return
 
-    # one file: collect the parts in the first worker and join them without converting again
-    progress(join_row, 0, 'fügt zusammen ...')
-    first = workers[0]
-    for job in everything:
-        worker = workers[job['row'] % len(workers)]
-        if worker is not first:
-            await first['ff'].writeFile(job['target'], await worker['ff'].readFile(job['target']))
-    await first['ff'].writeFile('parts.txt', maus.concat_list([job['target'] for job in everything]))
+    await asyncio.gather(*[convert_on(worker, share, f) for worker, share in zip(workers, jobs)])
+    if not single:
+        for job in everything:
+            offer(job['name'], await job['worker']['ff'].readFile(job['target']), maus.clock(job['seconds'] / f))
+        return
+    await join(workers[0], everything, 'target', chosen, seconds / f, join_row)
+
+
+async def join(first, jobs, key, chosen, seconds, row):
+    # one file: collect the files (job[key]) in the first worker and join them without converting again
+    progress(row, 0, 'fügt zusammen ...')
+    for job in jobs:
+        if job['worker'] is not first:
+            await first['ff'].writeFile(job[key], await job['worker']['ff'].readFile(job[key]))
+    await first['ff'].writeFile('parts.txt', maus.concat_list([job[key] for job in jobs]))
     name = maus.mix_name(chosen)
     code, log = await run(first, maus.concat_args('parts.txt', 'mix.mp3', name[:-4]))
     if code != 0:
         js.console.error(log)
         raise RuntimeError('ffmpeg konnte die Teile nicht zusammenfügen.')
-    progress(join_row, 1, 'fertig ({})'.format(maus.clock(seconds / f)), done=True)
-    offer(name, await first['ff'].readFile('mix.mp3'), maus.clock(seconds / f))
+    progress(row, 1, 'fertig ({})'.format(maus.clock(seconds)), done=True)
+    offer(name, await first['ff'].readFile('mix.mp3'), maus.clock(seconds))

@@ -159,7 +159,23 @@ button.small:hover { background: var(--soft); }
 .downloads a small { display: block; font-weight: 400; color: var(--muted); }
 .downloads .hint { margin-top: .7rem; }
 
+/* floating buttons: all the way up or down (on phones the selection is below the long list) */
+.jump { position: fixed; z-index: 40; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+        display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.jump button { position: relative; height: 48px; padding: 0 14px 0 10px; border: 0; border-radius: 24px; cursor: pointer;
+               display: flex; align-items: center; gap: 2px;
+               background: var(--orange); box-shadow: 0 3px 0 var(--orange-deep), 0 4px 12px rgba(0,0,0,.25);
+               transition: opacity .2s, transform .2s, background .1s; }
+.jump button:hover { background: #ef5d0e; }
+.jump button:active { background: var(--elefant); box-shadow: 0 1px 0 #3e3279; transform: translateY(2px); }
+.jump button.hide { display: none; }      /* takes no room: "up" moves down into the free space at the very end */
+.jump svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.jump svg.chev { width: 20px; height: 20px; stroke-width: 3; }
+.jump .picked { position: absolute; top: -5px; right: -5px; min-width: 1.35rem; padding: 0 .3rem; border-radius: 999px;
+                background: var(--yellow); color: var(--ink); font: 700 .78rem/1.35rem var(--sans); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+
 footer.bottom { background: var(--teal-deep); color: #eaf6f3; font-size: .85rem; }
 footer.bottom .wrap { padding-block: 1.3rem; }
 footer.bottom p { margin: .3rem 0; max-width: 60rem; }
 footer.bottom a { color: #fff; }
+@media (max-width: 860px) { footer.bottom .wrap { padding-bottom: 5.5rem; } }   /* room for the floating "up" button at the very end */
