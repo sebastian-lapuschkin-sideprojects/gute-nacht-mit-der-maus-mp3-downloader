@@ -35,6 +35,9 @@ class TestText(unittest.TestCase):
         self.assertEqual(maus.clock(3606), '1:00:06')
         self.assertEqual(maus.clock(1793), '29:53')
         self.assertEqual(maus.clock(5398.6), '1:29:59')
+        self.assertEqual(maus.minutes(4812.5), '80:12')
+        self.assertEqual(maus.minutes(maus.TARGET), '89:59')
+        self.assertEqual(maus.minutes(12160), '202:40')
 
     def test_dates(self):
         self.assertEqual(maus.german_date('2026-11-25'), 'Mi 25.11.2026')

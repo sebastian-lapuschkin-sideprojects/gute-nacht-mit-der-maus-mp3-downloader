@@ -61,7 +61,7 @@ def convert(args):
         formats.append(maus.audio_format(log))
 
     f = maus.factor(seconds, len(selected), measured=True)
-    print('together {}: {}'.format(maus.clock(seconds), maus.verdict(f)[1]))
+    print('together {} (the Tonie takes {}): {}'.format(maus.minutes(seconds), maus.minutes(maus.TARGET), maus.verdict(f)[1]))
     if f > maus.MAX_FACTOR:
         sys.exit(1)
 

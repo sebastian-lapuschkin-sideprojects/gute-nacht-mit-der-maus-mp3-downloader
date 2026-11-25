@@ -196,6 +196,12 @@ def clock(seconds):
     return '{}:{:02d}:{:02d}'.format(h, m, s) if h else '{}:{:02d}'.format(m, s)
 
 
+def minutes(seconds):
+    # 4812 -> '80:12': lengths compared with the Tonie's 89:59 are given in minutes, like the Tonie
+    seconds = int(round(seconds))
+    return '{}:{:02d}'.format(seconds // 60, seconds % 60)
+
+
 def german_date(iso):
     # '2026-11-25' -> 'Mi 25.11.2026'
     try:

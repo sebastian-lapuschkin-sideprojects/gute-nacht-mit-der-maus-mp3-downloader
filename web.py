@@ -175,7 +175,7 @@ def render_selection():
     el('over').style.left = '{}%'.format(100 * maus.TARGET / scale)
     el('over').style.width = '{}%'.format(100 * max(0, seconds - maus.TARGET) / scale)
     el('mark').style.left = 'calc({}% - 1px)'.format(100 * maus.TARGET / scale)
-    el('sum').textContent = 'Zusammen {}, auf den Tonie passen 89:59.'.format(maus.clock(seconds)) if chosen else ''
+    el('sum').textContent = 'Zusammen {}, auf den Tonie passen {}.'.format(maus.minutes(seconds), maus.minutes(maus.TARGET)) if chosen else ''
     level, text = maus.verdict(f)
     el('verdict').className = 'verdict ' + level
     el('verdict').textContent = text if chosen else ''
@@ -460,7 +460,7 @@ async def convert_all(chosen, single, workers):
         jobs[n % len(workers)].append({'row': n, 'episode': e, 'source': source, 'seconds': measured, 'worker': worker,
                                        'target': 'out{}.mp3'.format(n), 'name': maus.file_name(e, n + 1)})
     f = maus.factor(seconds, len(chosen), measured=True)
-    el('verdict').textContent = maus.verdict(f)[1] + ' (gemessen: zusammen {})'.format(maus.clock(seconds))
+    el('verdict').textContent = maus.verdict(f)[1] + ' (gemessen: zusammen {})'.format(maus.minutes(seconds))
     everything = sorted((job for share in jobs for job in share), key=lambda job: job['row'])
 
     if f == 1 and single and maus.joinable(formats):
