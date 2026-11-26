@@ -19,6 +19,7 @@ CORE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd/'   # ffmpeg 
 PAGE = 25          # episodes shown at first, and added by "mehr anzeigen"
 WORKERS = 3        # ffmpeg instances at most; each runs in its own thread and converts one file at a time
 DOWNLOADS = 3      # files downloaded at the same time
+CACHE_LIMIT = 1.5e9 # bytes of downloaded and converted files kept for later runs (see "files kept between runs")
 
 # the tabs: one per series, and all of them together
 TABS = [(key, title, about) for key, _, title, about, _ in maus.SERIES] + [('alle', 'Alle Reihen', 'Hier stehen die Folgen aller Reihen zusammen, die neuesten zuerst.')]
@@ -26,7 +27,8 @@ TABS = [(key, title, about) for key, _, title, about, _ in maus.SERIES] + [('all
 STORIES = 12       # story buttons shown before "weitere"
 
 state = {'episodes': [], 'by_id': {}, 'selected': [], 'series': 'zumhoeren', 'shown': {}, 'query': '', 'in_summary': False,
-         'stories': [], 'story': None, 'all_stories': False, 'busy': False, 'urls': []}
+         'stories': [], 'story': None, 'all_stories': False, 'busy': False, 'urls': [],
+         'cache': {}, 'measured': {}, 'used': set()}
 
 
 def el(name):
@@ -282,7 +284,7 @@ async def start():
     render()
 
 
-# ------------------------------------------------------------------------- download and convert
+# ------------------------------------------------------------------------------- the progress list
 
 def show_progress(rows):
     el('progress').innerHTML = ''.join(
@@ -300,8 +302,83 @@ def progress(row, fraction, text, done=False):
         item.classList.add('done')
 
 
+# -------------------------------------------------------------------- files kept between runs
+# Downloads, converted episodes and joined files stay in the page (as Blobs) for later runs, so that
+# switching between one file per episode and one single file, reordering, or removing and adding
+# episodes only downloads and converts what is new. The keys say what a file is made of:
+#   'src:<id>'                the episode's mp3 file from the WDR
+#   'out:<id>@<factor>'       that file, played <factor> times as fast (the result depends on nothing else)
+#   'mix:<part>|<part>|...'   these parts (src: or out: keys), joined in this order
+# The exact lengths and audio formats measured by ffmpeg are kept per episode in state['measured'].
+# When the files together grow beyond CACHE_LIMIT, the ones used longest ago go, but never those of
+# the last run.
+
+def cached(key):
+    blob = state['cache'].pop(key, None)
+    if blob is not None:
+        state['cache'][key] = blob          # the most recently used ones last
+        state['used'].add(key)
+    return blob
+
+
+def keep(key, blob):
+    state['cache'].pop(key, None)
+    state['cache'][key] = blob
+    state['used'].add(key)
+    return blob
+
+
+def trim_cache():
+    total = sum(blob.size for blob in state['cache'].values())
+    for key in list(state['cache']):
+        if total <= CACHE_LIMIT:
+            break
+        if key not in state['used']:
+            total -= state['cache'].pop(key).size
+
+
+def to_blob(data):
+    return js.Blob.new(to_js([data]), js_object({'type': 'audio/mpeg'}))
+
+
+async def file_data(blob):
+    # a fresh copy for ffmpeg: writeFile hands the buffer over to the worker, the Blob stays as it is
+    return js.Uint8Array.new(await blob.arrayBuffer())
+
+
+def plan_for(chosen, single):
+    # What the result is made of, once the exact lengths of all episodes are known (else None):
+    # the factor, the measured length, the key of every part and, for one single file, of the mix.
+    if any(e['id'] not in state['measured'] for e in chosen):
+        return None
+    seconds = sum(state['measured'][e['id']][0] for e in chosen)
+    formats = [state['measured'][e['id']][1] for e in chosen]
+    f = maus.factor(seconds, len(chosen), measured=True)
+    as_they_are = f == 1 and (not single or maus.joinable(formats))      # the WDR files themselves
+    parts = ['src:{}'.format(e['id']) if as_they_are else 'out:{}@{}'.format(e['id'], f) for e in chosen]
+    return {'f': f, 'seconds': seconds, 'formats': formats, 'parts': parts,
+            'mix': 'mix:' + '|'.join(parts) if single else None}
+
+
+def length(episode, plan):
+    # the episode's length in the result
+    return state['measured'][episode['id']][0] / plan['f']
+
+
+# ------------------------------------------------------------------------- download and convert
+
+async def source(episode, row, limit):
+    # the episode's mp3 file from the WDR as a Blob: kept from an earlier run, or downloaded now
+    key = 'src:{}'.format(episode['id'])
+    blob = cached(key)
+    if blob is not None:
+        progress(row, 1, 'schon geladen ({})'.format(megabytes(blob.size)))
+        return blob
+    return keep(key, await download(episode, row, limit))
+
+
 async def download(episode, row, limit):
-    # the mp3 file as a Uint8Array; two more tries if the connection breaks off
+    # the mp3 file as a Blob; two more tries if the connection breaks off
     async with limit:
         for attempt in range(3):
             try:
@@ -331,9 +408,9 @@ async def download_once(episode, row):
         got += part.value.length
         if size:
             progress(row, got / size, 'lädt {} %'.format(int(100 * got / size)))
-    data = js.Uint8Array.new(await js.Blob.new(chunks).arrayBuffer())
-    progress(row, 1, 'geladen ({})'.format(megabytes(data.length)))
-    return data
+    blob = js.Blob.new(chunks, js_object({'type': 'audio/mpeg'}))
+    progress(row, 1, 'geladen ({})'.format(megabytes(blob.size)))
+    return blob
 
 
 async def new_ffmpeg():
@@ -353,43 +430,102 @@ async def new_ffmpeg():
     return worker
 
 
+async def load(count, workers, row):
+    progress(row, 0, 'lädt (beim ersten Mal 32 MB) ...')
+    workers.extend(await asyncio.gather(*[new_ffmpeg() for _ in range(count)]))
+    progress(row, 1, 'bereit', done=True)
+
+
 async def run(worker, args):
     worker['log'] = []
     code = await worker['ff'].exec(to_js(args))
     return code, '\n'.join(worker['log'])
 
 
-async def convert_on(worker, jobs, f):
-    # one worker converts its share of the files, one after the other
+async def measure(worker, episode, blob, row):
+    # the exact length and audio format of an episode's file, measured once by ffmpeg
+    name = 'm{}.mp3'.format(row)
+    await worker['ff'].writeFile(name, await file_data(blob))
+    log = (await run(worker, ['-hide_banner', '-i', name]))[1]
+    await worker['ff'].deleteFile(name)
+    state['measured'][episode['id']] = (maus.duration_from_log(log) or episode['duration'], maus.audio_format(log))
+
+
+async def convert_on(worker, jobs, plan):
+    # one worker converts its share of the files, one after the other, and keeps the results
     for job in jobs:
-        out_seconds = job['seconds'] / f
-        worker['on_time'] = lambda t, row=job['row']: progress(row, t / out_seconds, 'wird umgerechnet {} %'.format(min(99, int(100 * t / out_seconds))))
-        code, log = await run(worker, maus.convert_args(job['source'], job['target'], f, job['episode']))
+        e, row, seconds = job['episode'], job['row'], length(job['episode'], plan)
+        await worker['ff'].writeFile('in.mp3', await file_data(job['source']))
+        worker['on_time'] = lambda t, row=row, seconds=seconds: progress(
+            row, t / seconds, 'wird umgerechnet {} %'.format(min(99, int(100 * t / seconds))))
+        code, log = await run(worker, maus.convert_args('in.mp3', 'out.mp3', plan['f'], e))
         worker['on_time'] = None
-        await worker['ff'].deleteFile(job['source'])
+        await worker['ff'].deleteFile('in.mp3')
         if code != 0:
             js.console.error(log)
-            raise RuntimeError('ffmpeg konnte „{}“ nicht umrechnen.'.format(job['episode']['title']))
-        progress(job['row'], 1, 'fertig ({})'.format(maus.minutes(out_seconds)), done=True)
+            raise RuntimeError('ffmpeg konnte „{}“ nicht umrechnen.'.format(e['title']))
+        keep(job['key'], to_blob(await worker['ff'].readFile('out.mp3')))
+        await worker['ff'].deleteFile('out.mp3')
+        progress(row, 1, 'fertig ({})'.format(maus.minutes(seconds)), done=True)
 
 
-def offer(name, data, note):
-    blob = js.Blob.new(to_js([data]), js_object({'type': 'audio/mpeg'}))
+async def join(worker, chosen, plan, row):
+    # one single file: the parts one after the other, without converting them again
+    progress(row, 0, 'fügt zusammen ...')
+    names = []
+    for n, key in enumerate(plan['parts']):
+        names.append('part{}.mp3'.format(n))
+        await worker['ff'].writeFile(names[-1], await file_data(cached(key)))
+    await worker['ff'].writeFile('parts.txt', maus.concat_list(names))
+    name = maus.mix_name(chosen)
+    code, log = await run(worker, maus.concat_args('parts.txt', 'mix.mp3', name[:-4]))
+    for part in names:
+        await worker['ff'].deleteFile(part)
+    if code != 0:
+        js.console.error(log)
+        raise RuntimeError('ffmpeg konnte die Teile nicht zusammenfügen.')
+    blob = keep(plan['mix'], to_blob(await worker['ff'].readFile('mix.mp3')))
+    await worker['ff'].deleteFile('mix.mp3')
+    seconds = plan['seconds'] / plan['f']
+    progress(row, 1, 'fertig ({})'.format(maus.minutes(seconds)), done=True)
+    offer(name, blob, maus.minutes(seconds))
+
+
+def offer(name, blob, note):
     url = js.URL.createObjectURL(blob)
     state['urls'].append(url)
     link = js.document.createElement('a')
     link.href, link.download = url, name
-    link.innerHTML = '⤓ {}<small>{}, {}</small>'.format(escape(name), note, megabytes(data.length))
+    link.innerHTML = '⤓ {}<small>{}, {}</small>'.format(escape(name), note, megabytes(blob.size))
     el('downloads').appendChild(link)
+
+
+def show_measured(plan):
+    el('verdict').textContent = ('Genau gemessen dauern die Folgen zusammen {}. '.format(maus.minutes(plan['seconds']))
+                                 + maus.verdict(plan['f'], final=True)[1])
+
+
+def offer_kept_mix(chosen, plan, ffmpeg_row, join_row):
+    # one single file made earlier from the same parts in the same order: offered right away
+    blob = cached(plan['mix']) if plan['mix'] else None
+    if blob is None:
+        return False
+    seconds = plan['seconds'] / plan['f']
+    for row, e in enumerate(chosen):
+        progress(row, 1, 'schon fertig ({})'.format(maus.minutes(length(e, plan))), done=True)
+    progress(ffmpeg_row, 1, 'nicht nötig', done=True)
+    progress(join_row, 1, 'schon fertig ({})'.format(maus.minutes(seconds)), done=True)
+    offer(maus.mix_name(chosen), blob, maus.minutes(seconds))
+    return True
 
 
 async def convert():
     chosen = selection()
     single = output_mode() == 'single'
-    estimate = maus.factor(sum(e['duration'] for e in chosen), len(chosen))
     if state['busy'] or not chosen:
         return
     state['busy'] = True
+    state['used'] = set()
     button = el('convert')
     button.disabled = True
     button.classList.add('busy')
@@ -400,16 +536,7 @@ async def convert():
     el('downloads').innerHTML = ''
     workers = []
     try:
-        if estimate == 1 and not single:
-            # fits as it is: the WDR files themselves, only renamed and numbered
-            show_progress([e['title'] for e in chosen])
-            limit = asyncio.Semaphore(DOWNLOADS)
-            datas = await asyncio.gather(*[download(e, n, limit) for n, e in enumerate(chosen)])
-            for n, (e, data) in enumerate(zip(chosen, datas)):
-                progress(n, 1, 'fertig ({})'.format(maus.minutes(e['duration'])), done=True)
-                offer(maus.file_name(e, n + 1), data, maus.minutes(e['duration']))
-        else:
-            await convert_all(chosen, single, workers)
+        await make(chosen, single, workers)
         done = js.document.createElement('p')
         done.className = 'hint'
         done.textContent = 'Lade die Dateien dann wie gewohnt über die Tonie-App oder my.tonies.com auf deinen Kreativ-Tonie.'
@@ -424,80 +551,84 @@ async def convert():
         for worker in workers:
             worker['ff'].terminate()
             worker['proxy'].destroy()
+        trim_cache()
         state['busy'] = False
         button.classList.remove('busy')
         render_selection()
 
 
-async def convert_all(chosen, single, workers):
-    rows = [e['title'] for e in chosen] + ['ffmpeg laden'] + (['zu einer Datei zusammenfügen'] if single else [])
-    show_progress(rows)
-    ffmpeg_row, join_row = len(chosen), len(chosen) + 1
-
-    # ffmpeg loads while the files download
-    async def load(count):
-        progress(ffmpeg_row, 0, 'lädt (beim ersten Mal 32 MB) ...')
-        loaded = await asyncio.gather(*[new_ffmpeg() for _ in range(count)])
-        workers.extend(loaded)
-        progress(ffmpeg_row, 1, 'bereit', done=True)
-
-    # a selection that fits as it is probably only needs joining: one ffmpeg is enough for that
-    fits = maus.factor(sum(e['duration'] for e in chosen), len(chosen)) == 1
-    loading = asyncio.ensure_future(load(1 if fits else min(WORKERS, len(chosen))))
+async def make(chosen, single, workers):
+    n = len(chosen)
     limit = asyncio.Semaphore(DOWNLOADS)
-    datas = await asyncio.gather(*[download(e, n, limit) for n, e in enumerate(chosen)])
-    await loading
-
-    # every file goes to one worker; there it gets measured exactly (length and format), then converted
-    jobs = [[] for _ in workers]
-    seconds, formats = 0, []
-    for n, (e, data) in enumerate(zip(chosen, datas)):
-        worker = workers[n % len(workers)]
-        source = 'in{}.mp3'.format(n)
-        await worker['ff'].writeFile(source, data)
-        log = (await run(worker, ['-hide_banner', '-i', source]))[1]
-        measured = maus.duration_from_log(log) or e['duration']
-        seconds += measured
-        formats.append(maus.audio_format(log))
-        jobs[n % len(workers)].append({'row': n, 'episode': e, 'source': source, 'seconds': measured, 'worker': worker,
-                                       'target': 'out{}.mp3'.format(n), 'name': maus.file_name(e, n + 1)})
-    f = maus.factor(seconds, len(chosen), measured=True)
-    el('verdict').textContent = 'Genau gemessen dauern die Folgen zusammen {}. '.format(maus.minutes(seconds)) + maus.verdict(f, final=True)[1]
-    everything = sorted((job for share in jobs for job in share), key=lambda job: job['row'])
-
-    if f == 1 and single and maus.joinable(formats):
-        # nothing to convert: the WDR files are joined as they are, which takes seconds
-        for job in everything:
-            progress(job['row'], 1, 'fertig ({})'.format(maus.minutes(job['seconds'])), done=True)
-        await join(workers[0], everything, 'source', chosen, seconds, join_row)
+    estimate = maus.factor(sum(e['duration'] for e in chosen), n)
+    if estimate == 1 and not single:
+        # fits as it is: the WDR files themselves, only renamed and numbered
+        show_progress([e['title'] for e in chosen])
+        blobs = await asyncio.gather(*[source(e, row, limit) for row, e in enumerate(chosen)])
+        for row, (e, blob) in enumerate(zip(chosen, blobs)):
+            progress(row, 1, 'fertig ({})'.format(maus.minutes(e['duration'])), done=True)
+            offer(maus.file_name(e, row + 1), blob, maus.minutes(e['duration']))
         return
-    if f == 1 and single:
+
+    show_progress([e['title'] for e in chosen] + ['ffmpeg laden'] + (['zu einer Datei zusammenfügen'] if single else []))
+    ffmpeg_row, join_row = n, n + 1
+    plan = plan_for(chosen, single)       # known if all episodes were measured in earlier runs
+    if plan:
+        show_measured(plan)
+        if offer_kept_mix(chosen, plan, ffmpeg_row, join_row):
+            return
+
+    # what is missing: everything while some lengths are unknown, else the parts not kept from earlier runs
+    need = list(range(n)) if plan is None else [row for row in range(n) if cached(plan['parts'][row]) is None]
+    for row in range(n):
+        if row not in need:
+            progress(row, 1, 'schon fertig ({})'.format(maus.minutes(length(chosen[row], plan))), done=True)
+    if plan is None:
+        count = 1 if estimate == 1 else min(WORKERS, n)       # a selection that fits probably only needs joining
+    else:
+        count = min(WORKERS, sum(1 for row in need if plan['parts'][row].startswith('out:'))) or (1 if single else 0)
+    loading = asyncio.ensure_future(load(count, workers, ffmpeg_row)) if count else None    # ffmpeg loads while the files download
+    if not count:
+        progress(ffmpeg_row, 1, 'nicht nötig', done=True)
+    try:
+        sources = dict(zip(need, await asyncio.gather(*[source(chosen[row], row, limit) for row in need])))
+    finally:
+        if loading:
+            await loading
+
+    if plan is None:
+        # every file not measured yet goes to one worker, which measures its exact length and format
+        unmeasured = [row for row in range(n) if chosen[row]['id'] not in state['measured']]
+
+        async def measure_share(worker, rows):
+            for row in rows:
+                await measure(worker, chosen[row], sources[row], row)
+
+        await asyncio.gather(*[measure_share(worker, unmeasured[i::len(workers)]) for i, worker in enumerate(workers)])
+        plan = plan_for(chosen, single)
+        show_measured(plan)
+        if offer_kept_mix(chosen, plan, ffmpeg_row, join_row):
+            return
+
+    # the parts still missing are converted ones (the WDR files themselves are kept by now)
+    todo = [row for row in range(n) if cached(plan['parts'][row]) is None]
+    for row in need:
+        if row not in todo:
+            progress(row, 1, 'fertig ({})'.format(maus.minutes(length(chosen[row], plan))), done=True)
+    if todo and plan['f'] == 1 and single:
         # different sample rates or channels: mp3 files like that cannot simply be put one after the other
         info = js.document.createElement('li')
         info.className = 'info'
         info.textContent = ('Die Folgen haben unterschiedliche Audioformate ({}). Sie werden deshalb einmal umgerechnet. '
-                            'Das dauert etwas länger als das reine Zusammenfügen.'.format(maus.describe_formats(formats)))
+                            'Das dauert etwas länger als das reine Zusammenfügen.'.format(maus.describe_formats(plan['formats'])))
         el('progress').prepend(info)
+    jobs = [[] for _ in workers]
+    for i, row in enumerate(todo):
+        jobs[i % len(workers)].append({'row': row, 'episode': chosen[row], 'source': sources[row], 'key': plan['parts'][row]})
+    await asyncio.gather(*[convert_on(worker, share, plan) for worker, share in zip(workers, jobs) if share])
 
-    await asyncio.gather(*[convert_on(worker, share, f) for worker, share in zip(workers, jobs)])
     if not single:
-        for job in everything:
-            offer(job['name'], await job['worker']['ff'].readFile(job['target']), maus.minutes(job['seconds'] / f))
+        for row, e in enumerate(chosen):
+            offer(maus.file_name(e, row + 1), cached(plan['parts'][row]), maus.minutes(length(e, plan)))
         return
-    await join(workers[0], everything, 'target', chosen, seconds / f, join_row)
-
-
-async def join(first, jobs, key, chosen, seconds, row):
-    # one file: collect the files (job[key]) in the first worker and join them without converting again
-    progress(row, 0, 'fügt zusammen ...')
-    for job in jobs:
-        if job['worker'] is not first:
-            await first['ff'].writeFile(job[key], await job['worker']['ff'].readFile(job[key]))
-    await first['ff'].writeFile('parts.txt', maus.concat_list([job[key] for job in jobs]))
-    name = maus.mix_name(chosen)
-    code, log = await run(first, maus.concat_args('parts.txt', 'mix.mp3', name[:-4]))
-    if code != 0:
-        js.console.error(log)
-        raise RuntimeError('ffmpeg konnte die Teile nicht zusammenfügen.')
-    progress(row, 1, 'fertig ({})'.format(maus.minutes(seconds)), done=True)
-    offer(name, await first['ff'].readFile('mix.mp3'), maus.minutes(seconds))
+    await join(workers[0], chosen, plan, join_row)

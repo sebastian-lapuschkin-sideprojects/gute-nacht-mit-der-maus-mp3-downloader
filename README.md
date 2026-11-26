@@ -35,6 +35,7 @@ Everything runs in the browser, nothing is uploaded:
 - [ffmpeg.wasm](https://ffmpegwasm.netlify.app/) does the audio work: ffmpeg's `atempo` filter, as in [toniefy.py](./toniefy.py) (chained for more than twice the speed, as ffmpeg's documentation suggests), with up to three files converted at the same time. A 60 minute episode takes well under a minute.
 
 If the selection fits as it is, the original WDR files are offered (numbered and renamed), without converting anything.
+Downloaded, converted and joined files stay in the page until it is closed or reloaded. Switching between one file per episode and one single file, changing the order, or removing and adding episodes therefore only downloads and converts what is new. Each file is identified by what it is made of (episode, speed-up factor, and the order of the parts), so the files themselves never need to be hashed.
 To run the page locally, serve the folder with any web server, e.g. `python -m http.server`, and open http://localhost:8000.
 The two small wrapper files of ffmpeg.wasm (MIT license) are in [vendor/ffmpeg](./vendor/ffmpeg); ffmpeg itself is loaded from jsDelivr.
 
