@@ -184,7 +184,7 @@ def render_selection():
 
     button = el('convert')
     if not state['busy']:
-        button.disabled = not chosen or f > maus.MAX_FACTOR
+        button.disabled = not chosen
         button.textContent = 'Herunterladen' if f == 1 else 'Umrechnen und herunterladen'     # (f == 1: only joined, if at all)
     on_scroll()
 
@@ -387,7 +387,7 @@ async def convert():
     chosen = selection()
     single = output_mode() == 'single'
     estimate = maus.factor(sum(e['duration'] for e in chosen), len(chosen))
-    if state['busy'] or not chosen or estimate > maus.MAX_FACTOR:
+    if state['busy'] or not chosen:
         return
     state['busy'] = True
     button = el('convert')

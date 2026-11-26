@@ -23,6 +23,7 @@ Hörspiele that belong together (stories in several parts such as "Luftpiraten (
 one click lists such a series in the order to listen to it, another click on the checkbox selects all of it.
 If the selection is longer than 89:59, the page says by how many percent it will be played faster
 (up to 5 % nobody notices, up to 10 % hardly, beyond that it is a matter of taste; the pitch stays the same).
+More than twice the speed is not recommended, but the page leaves that decision to the user.
 The button downloads the mp3 files from the WDR, speeds them up just enough to fit onto a
 [Creative-Tonie](https://tonies.com/) (90 minutes) and offers one file per episode or one single file.
 
@@ -31,7 +32,7 @@ Everything runs in the browser, nothing is uploaded:
 - the episode list comes from the GraphQL API of the [ARD Audiothek](https://www.ardaudiothek.de/) (it allows requests from any web page; the WDR's own podcast feeds do not),
 - the mp3 files come straight from the WDR's media server,
 - [Pyodide](https://pyodide.org/) runs the Python code ([maus.py](./maus.py) and [web.py](./web.py)),
-- [ffmpeg.wasm](https://ffmpegwasm.netlify.app/) does the audio work: ffmpeg's `atempo` filter, as in [toniefy.py](./toniefy.py), with up to three files converted at the same time. A 60 minute episode takes well under a minute.
+- [ffmpeg.wasm](https://ffmpegwasm.netlify.app/) does the audio work: ffmpeg's `atempo` filter, as in [toniefy.py](./toniefy.py) (chained for more than twice the speed, as ffmpeg's documentation suggests), with up to three files converted at the same time. A 60 minute episode takes well under a minute.
 
 If the selection fits as it is, the original WDR files are offered (numbered and renamed), without converting anything.
 To run the page locally, serve the folder with any web server, e.g. `python -m http.server`, and open http://localhost:8000.

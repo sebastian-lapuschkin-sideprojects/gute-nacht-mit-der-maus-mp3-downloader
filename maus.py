@@ -17,7 +17,7 @@ from urllib.parse import quote
 
 API = 'https://api.ardaudiothek.de/graphql?query='
 TARGET = 89 * 60 + 59      # seconds: just under the 90 minutes of a Creative-Tonie
-MAX_FACTOR = 2.0           # faster than this is no fun any more
+ADVISED_MAX = 2.0          # faster than this is not recommended (the page says so, but does not stop anyone)
 BITRATE = '128k'           # of the converted files (the WDR files have 128k, long Hörspiele 160k)
 
 # The series of "Die Maus" in the ARD Audiothek: key, Audiothek id, title, what it is, how many
@@ -176,11 +176,11 @@ def verdict(f, final=False):
     if f <= 1:
         return 'fits', 'Diese Zusammenstellung passt ohne Änderung auf den Tonie.'
     amount = german_number(percent, 1) + ' %'
-    faster = ('Diese Zusammenstellung wird um {} schneller abgespielt.' if final and f <= MAX_FACTOR
+    faster = ('Diese Zusammenstellung wird um {} schneller abgespielt.' if final
               else 'Diese Zusammenstellung würde um {} schneller abgespielt werden.').format(amount)
-    if f > MAX_FACTOR:
-        return 'too-much', faster + (' Eine mehr als doppelt so schnelle Wiedergabe ist nicht empfohlen.'
-                                     ' Bitte wähle weniger oder andere Folgen aus.')
+    if f > ADVISED_MAX:
+        return 'too-much', faster + ' Eine mehr als doppelt so schnelle Wiedergabe ist nicht empfohlen.' + (
+            '' if final else ' Bitte wähle weniger oder andere Folgen aus.')
     if percent <= 5:
         return 'unnoticed', faster + ' Das hört man nicht.'
     if percent <= 10:
@@ -299,12 +299,22 @@ def time_from_log(line):
     return int(h) * 3600 + int(m) * 60 + float(s)
 
 
+def tempo_filter(f):
+    # 'atempo=1.3'; above 2 a chain such as 'atempo=2.0,atempo=1.7': a single atempo takes up to 100,
+    # but above 2 it skips samples instead of blending them (ffmpeg's documentation suggests the chain)
+    steps = []
+    while f > 2:
+        steps.append(2.0)
+        f /= 2
+    return ','.join('atempo={}'.format(step) for step in steps + [f])
+
+
 def convert_args(source, target, f, episode):
     # ffmpeg arguments: audio only (the files carry a cover picture), faster by f, mp3 again,
     # with the episode's title in the tags
     args = ['-hide_banner', '-nostdin', '-y', '-i', source, '-map', '0:a', '-map_metadata', '-1']
     if f != 1:
-        args += ['-af', 'atempo={}'.format(f)]
+        args += ['-af', tempo_filter(f)]
     args += ['-c:a', 'libmp3lame', '-b:a', BITRATE,
              '-metadata', 'title=' + episode['title'],
              '-metadata', 'artist=' + TITLES[episode['series']],

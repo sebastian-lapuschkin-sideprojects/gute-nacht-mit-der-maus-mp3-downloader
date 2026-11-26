@@ -62,8 +62,6 @@ def convert(args):
 
     f = maus.factor(seconds, len(selected), measured=True)
     print('together {} (the Tonie takes {}): {}'.format(maus.minutes(seconds), maus.minutes(maus.TARGET), maus.verdict(f, final=True)[1]))
-    if f > maus.MAX_FACTOR:
-        sys.exit(1)
 
     if f == 1 and args.single and not maus.joinable(formats):
         print('the files differ in format ({}), so they get converted once before joining'.format(maus.describe_formats(formats)))

@@ -30,7 +30,15 @@ class TestTempo(unittest.TestCase):
         self.assertEqual(maus.verdict(2.1)[0], 'too-much')
         self.assertIn('würde um 20,0 % schneller abgespielt werden', maus.verdict(1.2)[1])
         self.assertIn('wird um 20,0 % schneller abgespielt.', maus.verdict(1.2, final=True)[1])
-        self.assertIn('würde', maus.verdict(2.1, final=True)[1])        # too much is never done
+        self.assertIn('Bitte wähle weniger', maus.verdict(2.1)[1])
+        self.assertIn('wird um 110,0 % schneller', maus.verdict(2.1, final=True)[1])     # not advised, but done
+        self.assertNotIn('Bitte wähle weniger', maus.verdict(2.1, final=True)[1])
+
+    def test_tempo_filter(self):
+        self.assertEqual(maus.tempo_filter(1.25), 'atempo=1.25')
+        self.assertEqual(maus.tempo_filter(2.0), 'atempo=2.0')
+        self.assertEqual(maus.tempo_filter(3.4), 'atempo=2.0,atempo=1.7')
+        self.assertEqual(maus.tempo_filter(5.0), 'atempo=2.0,atempo=2.0,atempo=1.25')
         self.assertTrue(maus.verdict(1.2)[1].endswith('Das ist Geschmackssache.'))
 
     def test_total_text(self):
