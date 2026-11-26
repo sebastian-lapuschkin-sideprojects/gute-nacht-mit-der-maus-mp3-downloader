@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Die Maus auf dem Tonie</title>
-<meta name="description" content="Folgen der Maus-Podcasts des WDR auswählen, auf höchstens 89:59 bringen und auf den Kreativ-Tonie laden. Alles läuft im Browser.">
+<meta name="description" content="Hier kannst du Folgen aus den Maus-Podcasts des WDR auswählen und passend für deinen Kreativ-Tonie herunterladen. Alles läuft in deinem Browser."
+      data-en-content="Here you can choose episodes from the WDR's Maus podcasts and download them to fit your Creative-Tonie. Everything runs in your browser.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -12,53 +13,71 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="style.css">
+<script>
+  // The language before anything is shown: German, unless English was chosen before (remembered in
+  // this browser) or a link asks for it with ?l=en. The rest is at the end of the page.
+  (function () {
+    var lang = 'de';
+    try { var kept = localStorage.getItem('maus-lang'); if (kept === 'de' || kept === 'en') lang = kept; } catch (e) {}
+    try { var asked = new URLSearchParams(location.search).get('l'); if (asked === 'de' || asked === 'en') { lang = asked; localStorage.setItem('maus-lang', lang); } } catch (e) {}
+    document.documentElement.lang = lang;
+  })();
+</script>
 </head>
 <body>
 <header class="top"><div class="wrap head">
   <div>
     <h1 class="tag">Die Maus auf dem Tonie</h1>
-    <p class="sub">Hier kannst du Folgen aus den Maus-Podcasts des WDR auswählen und passend für deinen Kreativ-Tonie
+    <p class="sub" lang="de">Hier kannst du Folgen aus den Maus-Podcasts des WDR auswählen und passend für deinen Kreativ-Tonie
       als Hörpaket mit höchstens 89:59 Minuten Laufzeit herunterladen. Alles läuft in deinem Browser.</p>
+    <p class="sub" lang="en">Here you can choose episodes from the WDR's Maus podcasts and download them as an audio package
+      of at most 89:59 minutes that fits your Creative-Tonie. Everything runs in your browser.</p>
   </div>
-  <a class="gh" href="https://github.com/sebastian-lapuschkin-sideprojects/gute-nacht-mit-der-maus-mp3-downloader">
+  <div class="corner">
+  <button id="lang" class="pill" title="English" data-en-title="Deutsch" aria-label="Switch to English" data-en-aria-label="Auf Deutsch umschalten">EN</button>
+  <a class="gh pill" href="https://github.com/sebastian-lapuschkin-sideprojects/gute-nacht-mit-der-maus-mp3-downloader">
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
-    Quellcode auf GitHub</a>
+    <span lang="de">Quellcode auf GitHub</span><span lang="en">Source code on GitHub</span></a>
+  </div>
 </div></header>
 
 <main class="wrap grid">
   <section class="card" id="episodes-card">
-    <h2 class="label">Folgen</h2>
-    <nav id="series" class="tabs" aria-label="Reihen"></nav>
+    <h2 class="label"><span lang="de">Folgen</span><span lang="en">Episodes</span></h2>
+    <nav id="series" class="tabs" aria-label="Reihen" data-en-aria-label="Series"></nav>
     <p id="about" class="hint"></p>
     <div class="filter">
-      <input type="search" id="search" placeholder="Titel durchsuchen, z. B. Luftpiraten" aria-label="Folgen durchsuchen" autocomplete="off">
-      <label class="check"><input type="checkbox" id="in-summary"> auch in den Beschreibungen</label>
+      <input type="search" id="search" placeholder="Titel durchsuchen, z. B. Luftpiraten" data-en-placeholder="Search the titles, e.g. Luftpiraten"
+             aria-label="Folgen durchsuchen" data-en-aria-label="Search the episodes" autocomplete="off">
+      <label class="check"><input type="checkbox" id="in-summary"> <span lang="de">auch in den Beschreibungen</span><span lang="en">also in the descriptions</span></label>
     </div>
     <div id="stories" class="stories" hidden></div>
-    <label class="check all"><input type="checkbox" id="all" data-action="selectall" disabled> <span id="all-label">alle angezeigten auswählen</span></label>
-    <ul id="episodes" class="episodes"><li class="note">Python wird geladen ...</li></ul>
-    <button id="more" class="small" data-action="more" hidden>mehr anzeigen</button>
+    <label class="check all"><input type="checkbox" id="all" data-action="selectall" disabled> <span id="all-label"><span lang="de">alle angezeigten auswählen</span><span lang="en">select all shown</span></span></label>
+    <ul id="episodes" class="episodes"><li class="note"><span lang="de">Python wird geladen ...</span><span lang="en">Loading Python ...</span></li></ul>
+    <button id="more" class="small" data-action="more" hidden><span lang="de">mehr anzeigen</span><span lang="en">show more</span></button>
   </section>
 
   <aside class="card" id="mix-card">
-    <h2 class="label">Für den Tonie</h2>
+    <h2 class="label"><span lang="de">Für den Tonie</span><span lang="en">For the Tonie</span></h2>
     <ol id="selected" class="selected"></ol>
     <div class="meter" aria-hidden="true"><div id="fill"></div><div id="over"></div><span id="mark"></span></div>
     <p id="sum" class="sum"></p>
     <p id="verdict" class="verdict"></p>
-    <p class="hint">Eine Beschleunigung um bis zu 10 % hört man nicht, und bis ca. 20 % ist sie kaum zu bemerken.
+    <p class="hint" lang="de">Eine Beschleunigung um bis zu 10 % hört man nicht, und bis ca. 20 % ist sie kaum zu bemerken.
       Alles darüber ist Geschmackssache. Die Tonhöhe bleibt immer gleich.</p>
+    <p class="hint" lang="en">Nobody hears a speed-up of up to 10%, and up to about 20% it is hardly noticeable.
+      Anything beyond that is a matter of taste. The pitch always stays the same.</p>
     <fieldset class="output">
-      <legend>Herunterladen als</legend>
-      <label><input type="radio" name="output" value="parts" checked> eine Datei pro Folge</label>
-      <label><input type="radio" name="output" value="single"> eine einzige Datei</label>
+      <legend><span lang="de">Herunterladen als</span><span lang="en">Download as</span></legend>
+      <label><input type="radio" name="output" value="parts" checked> <span lang="de">eine Datei pro Folge</span><span lang="en">one file per episode</span></label>
+      <label><input type="radio" name="output" value="single"> <span lang="de">eine einzige Datei</span><span lang="en">one single file</span></label>
     </fieldset>
     <div class="go">
       <div class="stage" aria-hidden="true">
         <img class="peek maus" src="https://www.wdrmaus.de/codebase/img/menue_maus.gif" alt="">
         <img class="peek elefant" src="https://www.wdrmaus.de/codebase/img/elefantenseite.png" alt="">
       </div>
-      <button id="convert" data-action="convert" disabled>Python wird geladen ...</button>
+      <button id="convert" data-action="convert" disabled><span lang="de">Python wird geladen ...</span><span lang="en">Loading Python ...</span></button>
       <img class="hands" src="https://www.wdrmaus.de/codebase/img/menue_maus_haende.png" alt="">
     </div>
     <ul id="progress" class="progress"></ul>
@@ -66,24 +85,61 @@
   </aside>
 </main>
 
-<nav class="jump" aria-label="springen">
+<nav class="jump" aria-label="springen" data-en-aria-label="jump">
   <!-- up to the search, down to saving (icons in the style of Feather, MIT) -->
-  <button id="to-top" class="hide" data-action="top" title="nach oben zur Suche" aria-label="nach oben zur Suche">
+  <button id="to-top" class="hide" data-action="top" title="nach oben zur Suche" aria-label="nach oben zur Suche"
+          data-en-title="up to the search" data-en-aria-label="up to the search">
     <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></button>
-  <button id="to-bottom" data-action="bottom" title="nach unten zum Speichern" aria-label="nach unten zum Speichern">
+  <button id="to-bottom" data-action="bottom" title="nach unten zum Speichern" aria-label="nach unten zum Speichern"
+          data-en-title="down to the download" data-en-aria-label="down to the download">
     <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg><span id="jump-count" class="picked" hidden></span></button>
 </nav>
 
 <footer class="bottom"><div class="wrap">
-  <p>Dies ist ein inoffizielles Fanprojekt und kein Angebot des WDR. Die Maus und der Elefant sind © WDR, die Bilder kommen
+  <p lang="de">Dies ist ein inoffizielles Fanprojekt und kein Angebot des WDR. Die Maus und der Elefant sind © WDR, die Bilder kommen
     direkt von <a href="https://www.wdrmaus.de/">wdrmaus.de</a>. Die Folgen stammen aus der
     <a href="https://www.ardaudiothek.de/">ARD Audiothek</a> und vom WDR und sind nur für den privaten Gebrauch bestimmt.</p>
-  <p>Alles läuft in deinem Browser: Die Folgenliste kommt von der ARD Audiothek, die MP3-Dateien kommen vom WDR, und
+  <p lang="de">Alles läuft in deinem Browser: Die Folgenliste kommt von der ARD Audiothek, die MP3-Dateien kommen vom WDR, und
     Python (Pyodide) sowie ffmpeg (ffmpeg.wasm) kommen von jsDelivr. Es wird nichts hochgeladen.
     <a href="https://github.com/sebastian-lapuschkin-sideprojects/gute-nacht-mit-der-maus-mp3-downloader">Quellcode auf GitHub</a></p>
+  <p lang="en">This is an unofficial fan project and not an offering of the WDR. The Maus and the elephant are © WDR, and the
+    pictures come directly from <a href="https://www.wdrmaus.de/">wdrmaus.de</a>. The episodes come from the
+    <a href="https://www.ardaudiothek.de/">ARD Audiothek</a> and the WDR and are meant for private use only.</p>
+  <p lang="en">Everything runs in your browser: the episode list comes from the ARD Audiothek, the MP3 files come from the WDR,
+    and Python (Pyodide) and ffmpeg (ffmpeg.wasm) come from jsDelivr. Nothing is uploaded.
+    <a href="https://github.com/sebastian-lapuschkin-sideprojects/gute-nacht-mit-der-maus-mp3-downloader">Source code on GitHub</a></p>
 </div></footer>
+
+<script>
+  // German or English. Texts in the page are there in both languages (lang="de" and lang="en";
+  // style.css shows the chosen one), attributes have their English version in data-en-*. The button
+  // switches, the choice is remembered, and the address gets ?l=en, so that a link keeps the language.
+  // web.py draws its own texts again on the event 'maus-lang'.
+  const NAMES = ['title', 'aria-label', 'placeholder', 'content'];
+  function setLang(lang) {
+    document.documentElement.lang = lang;
+    for (const node of document.querySelectorAll(NAMES.map(name => '[data-en-' + name + ']').join(','))) {
+      for (const name of NAMES) {
+        if (!node.hasAttribute('data-en-' + name)) continue;
+        if (!node.hasAttribute('data-de-' + name)) node.setAttribute('data-de-' + name, node.getAttribute(name));
+        node.setAttribute(name, node.getAttribute('data-' + lang + '-' + name));
+      }
+    }
+    document.getElementById('lang').textContent = lang === 'de' ? 'EN' : 'DE';
+    document.dispatchEvent(new Event('maus-lang'));
+  }
+  document.getElementById('lang').addEventListener('click', () => {
+    const lang = document.documentElement.lang === 'de' ? 'en' : 'de';
+    try { localStorage.setItem('maus-lang', lang); } catch (e) {}
+    const address = new URL(location.href);
+    if (lang === 'en') address.searchParams.set('l', 'en'); else address.searchParams.delete('l');
+    history.replaceState(null, '', address);
+    setLang(lang);
+  });
+  setLang(document.documentElement.lang);
+</script>
 
 <script src="vendor/ffmpeg/ffmpeg.js"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>

@@ -10,6 +10,8 @@
   --maxw: 72rem;
 }
 * { box-sizing: border-box; }
+/* German or English: every text in the page that is there in both languages shows only in the chosen one */
+html[lang="de"] [lang="en"], html[lang="en"] [lang="de"] { display: none !important; }
 body { margin: 0; color: var(--ink); font: 16px/1.5 var(--sans);
        background: var(--teal) repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 2px, transparent 2px 6px); }
 .wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: 16px; }
@@ -20,9 +22,13 @@ h1, h2 { font-family: var(--round); font-weight: 600; margin: 0; line-height: 1.
 /* header: the orange, slightly tilted name tag of wdrmaus.de */
 header.top { padding: 2.2rem 0 1.4rem; color: #fff; }
 header .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem 2rem; flex-wrap: wrap; }
-.gh { display: inline-flex; align-items: center; gap: .45rem; background: #fff; color: var(--ink); text-decoration: none;
-      font: 600 .95rem var(--round); padding: .4rem .85rem; border-radius: 999px; box-shadow: 2px 3px 0 rgba(0,0,0,.15); }
-.gh:hover { color: var(--orange); }
+/* top right: the language and the source code, as white pills */
+.corner { display: flex; align-items: center; gap: .6rem; }
+.pill { display: inline-flex; align-items: center; gap: .45rem; background: #fff; color: var(--ink); text-decoration: none;
+        font: 600 .95rem var(--round); padding: .4rem .85rem; border: 0; border-radius: 999px; cursor: pointer;
+        box-shadow: 2px 3px 0 rgba(0,0,0,.15); }
+.pill:hover { color: var(--orange); }
+#lang { min-width: 3.2rem; justify-content: center; }
 .gh svg { width: 1.15rem; height: 1.15rem; fill: currentColor; }
 .tag { display: inline-block; background: var(--orange); color: #fff; font-size: clamp(1.7rem, 5vw, 2.4rem);
        padding: .25rem .9rem .35rem; transform: rotate(-1.5deg); box-shadow: 3px 4px 0 rgba(0,0,0,.18); }

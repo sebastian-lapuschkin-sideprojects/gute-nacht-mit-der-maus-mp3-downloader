@@ -6,7 +6,8 @@ the same mp3 files as on wdrmaus.de). A selection of episodes is brought to at m
 that it fits on a Creative-Tonie (90 minutes): if it is longer, ffmpeg's atempo filter plays it
 faster without changing the pitch.
 
-Plain Python, no packages: Pyodide runs it as it is.
+Plain Python, no packages: Pyodide runs it as it is. Texts for the page come in German ('de')
+and English ('en'); German is the default.
 """
 
 import math
@@ -19,15 +20,27 @@ API = 'https://api.ardaudiothek.de/graphql?query='
 TARGET = 89 * 60 + 59      # seconds: just under the 90 minutes of a Creative-Tonie
 ADVISED_MAX = 2.0          # faster than this is not recommended (the page says so, but does not stop anyone)
 BITRATE = '128k'           # of the converted files (the WDR files have 128k, long Hörspiele 160k)
+LANGS = ('de', 'en')       # the languages of the page
 
-# The series of "Die Maus" in the ARD Audiothek: key, Audiothek id, title, what it is, how many
-# of the newest episodes to list (the news are worth listing for a few weeks only).
+# The series of "Die Maus" in the ARD Audiothek: key, Audiothek id, title (a name, the same in both
+# languages), what it is, how many of the newest episodes to list (the news are worth listing for a
+# few weeks only).
 SERIES = [
-    ('zumhoeren', 69106028, 'Die Maus zum Hören', 'Jeden Tag gibt es eine Stunde Lach- und Sachgeschichten mit Musik.', 100),
-    ('kurz', 81889970, 'MausHörspiel kurz', 'Hier gibt es kurze Hörspiele, die höchstens etwa 10 Minuten dauern.', 300),
-    ('lang', 36244846, 'MausHörspiel lang', 'Hier gibt es lange Hörspiele, die meist 40 bis 55 Minuten dauern.', 200),
-    ('gutenacht', 81471712, 'Gute Nacht mit der Maus', 'Jede Folge dauert etwa 20 Minuten und ist zum Einschlafen gedacht. Die Reihe wurde im Juli 2026 eingestellt.', 200),
-    ('nachrichten', 10378841, 'MausNachrichten', 'Jeden Werktag gibt es Nachrichten für Kinder.', 30),
+    ('zumhoeren', 69106028, 'Die Maus zum Hören',
+     {'de': 'Jeden Tag gibt es eine Stunde Lach- und Sachgeschichten mit Musik.',
+      'en': 'Every day there is an hour of stories to laugh at and to learn from, with music.'}, 100),
+    ('kurz', 81889970, 'MausHörspiel kurz',
+     {'de': 'Hier gibt es kurze Hörspiele, die höchstens etwa 10 Minuten dauern.',
+      'en': 'Here you find short audio plays that last about ten minutes at most.'}, 300),
+    ('lang', 36244846, 'MausHörspiel lang',
+     {'de': 'Hier gibt es lange Hörspiele, die meist 40 bis 55 Minuten dauern.',
+      'en': 'Here you find long audio plays, most of which last 40 to 55 minutes.'}, 200),
+    ('gutenacht', 81471712, 'Gute Nacht mit der Maus',
+     {'de': 'Jede Folge dauert etwa 20 Minuten und ist zum Einschlafen gedacht. Die Reihe wurde im Juli 2026 eingestellt.',
+      'en': 'Each episode lasts about 20 minutes and is meant for falling asleep. The series ended in July 2026.'}, 200),
+    ('nachrichten', 10378841, 'MausNachrichten',
+     {'de': 'Jeden Werktag gibt es Nachrichten für Kinder.',
+      'en': 'Every weekday there is news for children.'}, 30),
 ]
 TITLES = {key: title for key, _, title, _, _ in SERIES}
 
@@ -169,41 +182,77 @@ def factor(seconds, count=1, measured=False):
     return math.ceil(needed * 10000) / 10000
 
 
-def verdict(f, final=False):
+VERDICTS = {
+    'de': {'fits': 'Diese Zusammenstellung passt ohne Änderung auf den Tonie.',
+           'would': 'Diese Zusammenstellung würde um {} schneller abgespielt werden.',
+           'will': 'Diese Zusammenstellung wird um {} schneller abgespielt.',
+           'too-much': 'Eine mehr als doppelt so schnelle Wiedergabe ist nicht empfohlen.',
+           'fewer': 'Bitte wähle weniger oder andere Folgen aus.',
+           'unnoticed': 'Das hört man nicht.',
+           'slight': 'Das fällt kaum auf.',
+           'taste': 'Das ist Geschmackssache.'},
+    'en': {'fits': 'This selection fits on the Tonie as it is.',
+           'would': 'This selection would be played {} faster.',
+           'will': 'This selection will be played {} faster.',
+           'too-much': 'Playback at more than twice the speed is not recommended.',
+           'fewer': 'Please choose fewer or other episodes.',
+           'unnoticed': 'You will not hear the difference.',
+           'slight': 'It is hardly noticeable.',
+           'taste': 'That is a matter of taste.'},
+}
+
+
+def verdict(f, final=False, lang='de'):
     # (level, text) about a speed-up factor, for the page. final: the factor is measured, the
     # files get converted now ("wird ... abgespielt" instead of "würde ... abgespielt werden").
+    say = VERDICTS[lang]
     percent = math.ceil(round((f - 1) * 1000, 6)) / 10     # rounded up to a tenth: never "0,0 %"
     if f <= 1:
-        return 'fits', 'Diese Zusammenstellung passt ohne Änderung auf den Tonie.'
-    amount = german_number(percent, 1) + ' %'
-    faster = ('Diese Zusammenstellung wird um {} schneller abgespielt.' if final
-              else 'Diese Zusammenstellung würde um {} schneller abgespielt werden.').format(amount)
+        return 'fits', say['fits']
+    faster = say['will' if final else 'would'].format(percent_text(percent, lang))
     if f > ADVISED_MAX:
-        return 'too-much', faster + ' Eine mehr als doppelt so schnelle Wiedergabe ist nicht empfohlen.' + (
-            '' if final else ' Bitte wähle weniger oder andere Folgen aus.')
+        return 'too-much', faster + ' ' + say['too-much'] + ('' if final else ' ' + say['fewer'])
     if percent <= 10:                   # subjective, from listening: up to 10 % nobody notices,
-        return 'unnoticed', faster + ' Das hört man nicht.'
+        return 'unnoticed', faster + ' ' + say['unnoticed']
     if percent <= 20:                   # up to 20 % hardly anyone
-        return 'slight', faster + ' Das fällt kaum auf.'
-    return 'taste', faster + ' Das ist Geschmackssache.'
+        return 'slight', faster + ' ' + say['slight']
+    return 'taste', faster + ' ' + say['taste']
 
 
-def total_text(seconds, count):
+def total_text(seconds, count, lang='de'):
     # the sum under the selection, in minutes like the Tonie's 89:59
+    if lang == 'en':
+        if count == 1:
+            return 'The selected episode lasts {}. The Tonie holds {} minutes.'.format(minutes(seconds), minutes(TARGET))
+        return 'The {} selected episodes last {} together. The Tonie holds {} minutes.'.format(
+            number_word(count, lang), minutes(seconds), minutes(TARGET))
     if count == 1:
         return 'Die ausgewählte Folge dauert {}. Auf den Tonie passen {} Minuten.'.format(minutes(seconds), minutes(TARGET))
     return 'Die {} ausgewählten Folgen dauern zusammen {}. Auf den Tonie passen {} Minuten.'.format(
         number_word(count), minutes(seconds), minutes(TARGET))
 
 
-def number_word(n):
-    # numbers up to twelve are written as words in German texts: 3 -> 'drei', 16 -> '16'
-    words = ['null', 'eine', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf']
+NUMBER_WORDS = {
+    'de': ['null', 'eine', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf'],
+    'en': ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'],
+}
+
+
+def number_word(n, lang='de'):
+    # numbers up to twelve are written as words in texts: 3 -> 'drei' (or 'three'), 16 -> '16'
+    words = NUMBER_WORDS[lang]
     return words[n] if 0 <= n < len(words) else str(n)
 
 
-def german_number(x, digits):
-    return '{:.{}f}'.format(x, digits).replace('.', ',')
+def decimal(x, digits, lang='de'):
+    # 44.1 -> '44,1' in German, '44.1' in English
+    text = '{:.{}f}'.format(x, digits)
+    return text.replace('.', ',') if lang == 'de' else text
+
+
+def percent_text(percent, lang='de'):
+    # '5,6 %' in German (with a space), '5.6%' in English
+    return decimal(percent, 1, lang) + (' %' if lang == 'de' else '%')
 
 
 def clock(seconds):
@@ -220,12 +269,15 @@ def minutes(seconds):
     return '{}:{:02d}'.format(seconds // 60, seconds % 60)
 
 
-def german_date(iso):
-    # '2026-11-25' -> 'Mi 25.11.2026'
+def date_text(iso, lang='de'):
+    # '2026-11-25' -> 'Mi 25.11.2026' (German) or 'Wed 25 Nov 2026' (English)
     try:
         day = datetime.strptime(iso, '%Y-%m-%d')
     except ValueError:
         return iso
+    if lang == 'en':
+        month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][day.month - 1]
+        return '{} {} {} {}'.format(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][day.weekday()], day.day, month, day.year)
     return '{} {:%d.%m.%Y}'.format(['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()], day)
 
 
@@ -249,12 +301,15 @@ def file_name(episode, number=None):
     return safe(name) + '.mp3'
 
 
-def mix_name(selected):
+def mix_name(selected, lang='de'):
     # one file for the whole selection: 'Maus-Tonie 2026-11-25 Wintertiere und 3 weitere.mp3'
+    # (in English '... Wintertiere and 3 more.mp3')
     newest = max(e['date'] for e in selected)
     rest = len(selected) - 1
     name = 'Maus-Tonie {} {}'.format(newest, short_title(selected[0]))
-    if rest:
+    if rest and lang == 'en':
+        name += ' and {} {}'.format(rest, 'more' if rest > 1 else 'more episode')
+    elif rest:
         name += ' und {} {}'.format(rest, 'weitere' if rest > 1 else 'weitere Folge')
     return safe(name) + '.mp3'
 
@@ -280,11 +335,15 @@ def joinable(formats):
     return bool(formats) and all(f is not None and f[0] == 'mp3' and f == formats[0] for f in formats)
 
 
-def describe_formats(formats):
+def describe_formats(formats, lang='de'):
     # 'MP3 48 kHz stereo / MP3 44,1 kHz stereo': the different formats among the files
     names = []
     for f in formats:
-        name = '{} {} kHz {}'.format(f[0].upper(), german_number(int(f[1]) / 1000, 1).replace(',0', ''), f[2]) if f else 'unbekannt'
+        if f:
+            rate = re.sub(r'[.,]0$', '', decimal(int(f[1]) / 1000, 1, lang))
+            name = '{} {} kHz {}'.format(f[0].upper(), rate, f[2])
+        else:
+            name = 'unknown' if lang == 'en' else 'unbekannt'
         if name not in names:
             names.append(name)
     return ' / '.join(names)

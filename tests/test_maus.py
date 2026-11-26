@@ -41,11 +41,24 @@ class TestTempo(unittest.TestCase):
         self.assertEqual(maus.tempo_filter(5.0), 'atempo=2.0,atempo=2.0,atempo=1.25')
         self.assertTrue(maus.verdict(1.3)[1].endswith('Das ist Geschmackssache.'))
 
+    def test_verdict_english(self):
+        self.assertEqual(maus.verdict(1.0, lang='en'), ('fits', 'This selection fits on the Tonie as it is.'))
+        self.assertEqual(maus.verdict(1.056, lang='en')[1], 'This selection would be played 5.6% faster. You will not hear the difference.')
+        self.assertEqual(maus.verdict(1.15, final=True, lang='en')[1], 'This selection will be played 15.0% faster. It is hardly noticeable.')
+        self.assertTrue(maus.verdict(1.3, lang='en')[1].endswith('That is a matter of taste.'))
+        self.assertTrue(maus.verdict(2.1, lang='en')[1].endswith('not recommended. Please choose fewer or other episodes.'))
+        self.assertNotIn('Please choose', maus.verdict(2.1, final=True, lang='en')[1])
+        for f in (1.0, 1.05, 1.15, 1.3, 2.1):        # the same levels in both languages
+            self.assertEqual(maus.verdict(f)[0], maus.verdict(f, lang='en')[0])
+
     def test_total_text(self):
         self.assertEqual(maus.total_text(4812, 3),
                          'Die drei ausgewählten Folgen dauern zusammen 80:12. Auf den Tonie passen 89:59 Minuten.')
         self.assertIn('Die 13 ausgewählten Folgen', maus.total_text(9000, 13))
         self.assertEqual(maus.total_text(3006, 1), 'Die ausgewählte Folge dauert 50:06. Auf den Tonie passen 89:59 Minuten.')
+        self.assertEqual(maus.total_text(4812, 3, 'en'), 'The three selected episodes last 80:12 together. The Tonie holds 89:59 minutes.')
+        self.assertEqual(maus.total_text(3006, 1, 'en'), 'The selected episode lasts 50:06. The Tonie holds 89:59 minutes.')
+        self.assertEqual(maus.number_word(12, 'en'), 'twelve')
 
 
 class TestText(unittest.TestCase):
@@ -58,13 +71,17 @@ class TestText(unittest.TestCase):
         self.assertEqual(maus.minutes(12160), '202:40')
 
     def test_dates(self):
-        self.assertEqual(maus.german_date('2026-11-25'), 'Mi 25.11.2026')
+        self.assertEqual(maus.date_text('2026-11-25'), 'Mi 25.11.2026')
+        self.assertEqual(maus.date_text('2026-11-25', 'en'), 'Wed 25 Nov 2026')
+        self.assertEqual(maus.date_text('2026-03-01', 'en'), 'Sun 1 Mar 2026')
 
     def test_file_names(self):
         episode = {'title': 'Oma verbuddeln (1/2) | Familiengeschichte ab 8 Jahren', 'series': 'lang', 'date': '2026-09-11'}
         self.assertEqual(maus.file_name(episode, 3), '03 Oma verbuddeln (1-2) (MausHörspiel lang, 2026-09-11).mp3')
         other = {'title': 'Wintertiere', 'series': 'zumhoeren', 'date': '2026-11-25'}
         self.assertEqual(maus.mix_name([other, episode]), 'Maus-Tonie 2026-11-25 Wintertiere und 1 weitere Folge.mp3')
+        self.assertEqual(maus.mix_name([other, episode], 'en'), 'Maus-Tonie 2026-11-25 Wintertiere and 1 more episode.mp3')
+        self.assertEqual(maus.mix_name([other, episode, episode], 'en'), 'Maus-Tonie 2026-11-25 Wintertiere and 2 more.mp3')
 
     def test_ffmpeg_log(self):
         log = 'Input #0, mp3\n  Duration: 01:00:06.17, start: 0.023021, bitrate: 129 kb/s\n'
@@ -83,6 +100,8 @@ class TestText(unittest.TestCase):
         self.assertFalse(maus.joinable([]))
         self.assertEqual(maus.describe_formats([maus.audio_format(log128), maus.audio_format(log44), maus.audio_format(log160)]),
                          'MP3 48 kHz stereo / MP3 44,1 kHz stereo')
+        self.assertEqual(maus.describe_formats([maus.audio_format(log128), maus.audio_format(log44), None], 'en'),
+                         'MP3 48 kHz stereo / MP3 44.1 kHz stereo / unknown')
 
 
 class TestEpisodes(unittest.TestCase):

@@ -27,6 +27,7 @@ and anything beyond that is a matter of taste. The pitch always stays the same.
 More than twice the speed is not recommended, but the page leaves that decision to the user.
 The button downloads the mp3 files from the WDR, speeds them up just enough to fit onto a
 [Creative-Tonie](https://tonies.com/) (90 minutes) and offers one file per episode or one single file.
+The page is in German and in English. The button at the top right switches between the two, the browser remembers the choice, and a link with `?l=en` at its end opens the page in English.
 
 Everything runs in the browser, nothing is uploaded:
 
