@@ -21,8 +21,9 @@ A search field filters the titles (optionally also the descriptions), and one ch
 Hörspiele that belong together (stories in several parts such as "Luftpiraten (1)" ... "(15)", and series such as
 "KunstKrimi - ..." or "Kurt, das Einhorn: ...") are recognised by their titles and offered as buttons:
 one click lists such a series in the order to listen to it, another click on the checkbox selects all of it.
-If the selection is longer than 89:59, the page says by how many percent it will be played faster
-(up to 5 % nobody notices, up to 10 % hardly, beyond that it is a matter of taste; the pitch stays the same).
+If the selection is longer than 89:59, the page says by how many percent it will be played faster.
+By our subjective estimate, nobody notices a speed-up of up to 10 %, hardly anyone notices one of up to 20 %,
+and anything beyond that is a matter of taste. The pitch always stays the same.
 More than twice the speed is not recommended, but the page leaves that decision to the user.
 The button downloads the mp3 files from the WDR, speeds them up just enough to fit onto a
 [Creative-Tonie](https://tonies.com/) (90 minutes) and offers one file per episode or one single file.

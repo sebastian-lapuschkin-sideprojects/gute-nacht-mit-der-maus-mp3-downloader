@@ -181,9 +181,9 @@ def verdict(f, final=False):
     if f > ADVISED_MAX:
         return 'too-much', faster + ' Eine mehr als doppelt so schnelle Wiedergabe ist nicht empfohlen.' + (
             '' if final else ' Bitte wähle weniger oder andere Folgen aus.')
-    if percent <= 5:
+    if percent <= 10:                   # subjective, from listening: up to 10 % nobody notices,
         return 'unnoticed', faster + ' Das hört man nicht.'
-    if percent <= 10:
+    if percent <= 20:                   # up to 20 % hardly anyone
         return 'slight', faster + ' Das fällt kaum auf.'
     return 'taste', faster + ' Das ist Geschmackssache.'
 

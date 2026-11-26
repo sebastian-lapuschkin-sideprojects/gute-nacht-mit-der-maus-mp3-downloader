@@ -23,10 +23,10 @@ class TestTempo(unittest.TestCase):
         self.assertEqual(maus.verdict(1.0)[0], 'fits')
         self.assertEqual(maus.verdict(1.0001)[0], 'unnoticed')
         self.assertIn('0,1 %', maus.verdict(1.0001)[1])
-        self.assertEqual(maus.verdict(1.05)[0], 'unnoticed')
-        self.assertEqual(maus.verdict(1.0501)[0], 'slight')
-        self.assertEqual(maus.verdict(1.10)[0], 'slight')
-        self.assertEqual(maus.verdict(1.2)[0], 'taste')
+        self.assertEqual(maus.verdict(1.10)[0], 'unnoticed')
+        self.assertEqual(maus.verdict(1.1001)[0], 'slight')
+        self.assertEqual(maus.verdict(1.20)[0], 'slight')
+        self.assertEqual(maus.verdict(1.2001)[0], 'taste')
         self.assertEqual(maus.verdict(2.1)[0], 'too-much')
         self.assertIn('würde um 20,0 % schneller abgespielt werden', maus.verdict(1.2)[1])
         self.assertIn('wird um 20,0 % schneller abgespielt.', maus.verdict(1.2, final=True)[1])
@@ -39,7 +39,7 @@ class TestTempo(unittest.TestCase):
         self.assertEqual(maus.tempo_filter(2.0), 'atempo=2.0')
         self.assertEqual(maus.tempo_filter(3.4), 'atempo=2.0,atempo=1.7')
         self.assertEqual(maus.tempo_filter(5.0), 'atempo=2.0,atempo=2.0,atempo=1.25')
-        self.assertTrue(maus.verdict(1.2)[1].endswith('Das ist Geschmackssache.'))
+        self.assertTrue(maus.verdict(1.3)[1].endswith('Das ist Geschmackssache.'))
 
     def test_total_text(self):
         self.assertEqual(maus.total_text(4812, 3),
