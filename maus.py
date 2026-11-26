@@ -23,11 +23,11 @@ BITRATE = '128k'           # of the converted files (the WDR files have 128k, lo
 # The series of "Die Maus" in the ARD Audiothek: key, Audiothek id, title, what it is, how many
 # of the newest episodes to list (the news are worth listing for a few weeks only).
 SERIES = [
-    ('zumhoeren', 69106028, 'Die Maus zum Hören', 'jeden Tag eine Stunde Lach- und Sachgeschichten mit Musik', 100),
-    ('kurz', 81889970, 'MausHörspiel kurz', 'Hörspiele bis etwa 10 Minuten', 300),
-    ('lang', 36244846, 'MausHörspiel lang', 'lange Hörspiele, meist 40 bis 55 Minuten', 200),
-    ('gutenacht', 81471712, 'Gute Nacht mit der Maus', 'etwa 20 Minuten zum Einschlafen (eingestellt im Juli 2026)', 200),
-    ('nachrichten', 10378841, 'MausNachrichten', 'Nachrichten für Kinder, jeden Werktag', 30),
+    ('zumhoeren', 69106028, 'Die Maus zum Hören', 'Jeden Tag gibt es eine Stunde Lach- und Sachgeschichten mit Musik.', 100),
+    ('kurz', 81889970, 'MausHörspiel kurz', 'Hier gibt es kurze Hörspiele, die höchstens etwa 10 Minuten dauern.', 300),
+    ('lang', 36244846, 'MausHörspiel lang', 'Hier gibt es lange Hörspiele, die meist 40 bis 55 Minuten dauern.', 200),
+    ('gutenacht', 81471712, 'Gute Nacht mit der Maus', 'Jede Folge dauert etwa 20 Minuten und ist zum Einschlafen gedacht. Die Reihe wurde im Juli 2026 eingestellt.', 200),
+    ('nachrichten', 10378841, 'MausNachrichten', 'Jeden Werktag gibt es Nachrichten für Kinder.', 30),
 ]
 TITLES = {key: title for key, _, title, _, _ in SERIES}
 
@@ -169,19 +169,37 @@ def factor(seconds, count=1, measured=False):
     return math.ceil(needed * 10000) / 10000
 
 
-def verdict(f):
-    # (level, text) about a speed-up factor, for the page
+def verdict(f, final=False):
+    # (level, text) about a speed-up factor, for the page. final: the factor is measured, the
+    # files get converted now ("wird ... abgespielt" instead of "würde ... abgespielt werden").
     percent = math.ceil(round((f - 1) * 1000, 6)) / 10     # rounded up to a tenth: never "0,0 %"
     if f <= 1:
-        return 'fits', 'Passt ohne Änderung auf den Tonie.'
+        return 'fits', 'Diese Zusammenstellung passt ohne Änderung auf den Tonie.'
     amount = german_number(percent, 1) + ' %'
+    faster = ('Diese Zusammenstellung wird um {} schneller abgespielt.' if final and f <= MAX_FACTOR
+              else 'Diese Zusammenstellung würde um {} schneller abgespielt werden.').format(amount)
     if f > MAX_FACTOR:
-        return 'too-much', 'Das wären {} schneller. Mehr als doppelt so schnell geht nicht, bitte weniger auswählen.'.format(amount)
+        return 'too-much', faster + (' Eine mehr als doppelt so schnelle Wiedergabe ist nicht empfohlen.'
+                                     ' Bitte wähle weniger oder andere Folgen aus.')
     if percent <= 5:
-        return 'unnoticed', 'Wird um {} schneller abgespielt. Das hört man nicht.'.format(amount)
+        return 'unnoticed', faster + ' Das hört man nicht.'
     if percent <= 10:
-        return 'slight', 'Wird um {} schneller abgespielt. Das fällt kaum auf.'.format(amount)
-    return 'taste', 'Wird um {} schneller abgespielt. Ab hier ist es Geschmackssache.'.format(amount)
+        return 'slight', faster + ' Das fällt kaum auf.'
+    return 'taste', faster + ' Das ist Geschmackssache.'
+
+
+def total_text(seconds, count):
+    # the sum under the selection, in minutes like the Tonie's 89:59
+    if count == 1:
+        return 'Die ausgewählte Folge dauert {}. Auf den Tonie passen {} Minuten.'.format(minutes(seconds), minutes(TARGET))
+    return 'Die {} ausgewählten Folgen dauern zusammen {}. Auf den Tonie passen {} Minuten.'.format(
+        number_word(count), minutes(seconds), minutes(TARGET))
+
+
+def number_word(n):
+    # numbers up to twelve are written as words in German texts: 3 -> 'drei', 16 -> '16'
+    words = ['null', 'eine', 'zwei', 'drei', 'vier', 'fünf', 'sechs', 'sieben', 'acht', 'neun', 'zehn', 'elf', 'zwölf']
+    return words[n] if 0 <= n < len(words) else str(n)
 
 
 def german_number(x, digits):

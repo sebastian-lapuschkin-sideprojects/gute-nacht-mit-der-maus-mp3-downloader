@@ -28,6 +28,16 @@ class TestTempo(unittest.TestCase):
         self.assertEqual(maus.verdict(1.10)[0], 'slight')
         self.assertEqual(maus.verdict(1.2)[0], 'taste')
         self.assertEqual(maus.verdict(2.1)[0], 'too-much')
+        self.assertIn('würde um 20,0 % schneller abgespielt werden', maus.verdict(1.2)[1])
+        self.assertIn('wird um 20,0 % schneller abgespielt.', maus.verdict(1.2, final=True)[1])
+        self.assertIn('würde', maus.verdict(2.1, final=True)[1])        # too much is never done
+        self.assertTrue(maus.verdict(1.2)[1].endswith('Das ist Geschmackssache.'))
+
+    def test_total_text(self):
+        self.assertEqual(maus.total_text(4812, 3),
+                         'Die drei ausgewählten Folgen dauern zusammen 80:12. Auf den Tonie passen 89:59 Minuten.')
+        self.assertIn('Die 13 ausgewählten Folgen', maus.total_text(9000, 13))
+        self.assertEqual(maus.total_text(3006, 1), 'Die ausgewählte Folge dauert 50:06. Auf den Tonie passen 89:59 Minuten.')
 
 
 class TestText(unittest.TestCase):

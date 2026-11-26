@@ -37,7 +37,7 @@ def ffmpeg(args):
 def show(args):
     found = [e for e in all_episodes() if not args.series or e['series'] in args.series]
     for e in found:
-        print('{:>9}  {:<12} {}  {:>7}  {}'.format(e['id'], e['series'], e['date'], maus.clock(e['duration']), e['title']))
+        print('{:>9}  {:<12} {}  {:>7}  {}'.format(e['id'], e['series'], e['date'], maus.minutes(e['duration']), e['title']))
 
 
 def convert(args):
@@ -61,7 +61,7 @@ def convert(args):
         formats.append(maus.audio_format(log))
 
     f = maus.factor(seconds, len(selected), measured=True)
-    print('together {} (the Tonie takes {}): {}'.format(maus.minutes(seconds), maus.minutes(maus.TARGET), maus.verdict(f)[1]))
+    print('together {} (the Tonie takes {}): {}'.format(maus.minutes(seconds), maus.minutes(maus.TARGET), maus.verdict(f, final=True)[1]))
     if f > maus.MAX_FACTOR:
         sys.exit(1)
 
@@ -89,7 +89,7 @@ def convert(args):
         parts = [mix]
 
     for p in parts:
-        print('written: {} ({})'.format(p, maus.clock(maus.duration_from_log(ffmpeg(['-hide_banner', '-i', p])))))
+        print('written: {} ({})'.format(p, maus.minutes(maus.duration_from_log(ffmpeg(['-hide_banner', '-i', p])))))
 
 
 def main():

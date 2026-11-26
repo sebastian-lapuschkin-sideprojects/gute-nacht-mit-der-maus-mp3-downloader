@@ -21,7 +21,7 @@ WORKERS = 3        # ffmpeg instances at most; each runs in its own thread and c
 DOWNLOADS = 3      # files downloaded at the same time
 
 # the tabs: one per series, and all of them together
-TABS = [(key, title, about) for key, _, title, about, _ in maus.SERIES] + [('alle', 'Alle Reihen', 'alle Reihen zusammen, die neuesten zuerst')]
+TABS = [(key, title, about) for key, _, title, about, _ in maus.SERIES] + [('alle', 'Alle Reihen', 'Hier stehen die Folgen aller Reihen zusammen, die neuesten zuerst.')]
 
 STORIES = 12       # story buttons shown before "weitere"
 
@@ -114,8 +114,9 @@ def render_tabs():
             '<span class="picked" title="ausgewählt">{}</span>'.format(picked) if picked else ''))
     el('series').innerHTML = ''.join(buttons)
     if story():
-        el('about').textContent = '„{}“: {} Folgen, zusammen {}, in der Reihenfolge zum Hören'.format(
-            story()['name'], len(story()['ids']), maus.clock(story()['seconds']))
+        el('about').textContent = ('Zu „{}“ gibt es hier {} Folgen, die zusammen {} dauern. '
+                                   'Sie stehen in der Reihenfolge zum Hören.').format(
+            story()['name'], maus.number_word(len(story()['ids'])), maus.clock(story()['seconds']))
     else:
         el('about').textContent = next(about for key, _, about in TABS if key == state['series'])
 
@@ -133,8 +134,8 @@ def render_episodes():
             '<span class="dur">{}</span><p class="summary">{}</p></li>'.format(
                 ' on' if on else '', e['id'], ' checked' if on else '', escape(e['title']), escape(e['title']),
                 escape(maus.TITLES[e['series']]) + ' · ' if every else '', maus.german_date(e['date']),
-                maus.clock(e['duration']), escape(e['summary'])))
-    empty = ('Keine Treffer für „{}“.'.format(escape(state['query'].strip())) if searching()
+                maus.minutes(e['duration']), escape(e['summary'])))
+    empty = ('Für „{}“ gibt es keine Treffer.'.format(escape(state['query'].strip())) if searching()
              else 'Gerade gibt es hier keine Folgen.')
     el('episodes').innerHTML = ''.join(rows) or '<li class="note">{}</li>'.format(empty)
     el('more').hidden = searching() or len(shown) >= len(listed(state['series']))
@@ -160,13 +161,14 @@ def render_selection():
             '<button data-action="down" data-id="{id}" title="nach hinten" aria-label="nach hinten"{}>↓</button>'
             '<button data-action="toggle" data-id="{id}" title="entfernen" aria-label="entfernen">✕</button>'
             '</span></li>'.format(
-                escape(e['title']), escape(maus.TITLES[e['series']]), maus.german_date(e['date']), maus.clock(e['duration']),
+                escape(e['title']), escape(maus.TITLES[e['series']]), maus.german_date(e['date']), maus.minutes(e['duration']),
                 ' disabled' if n == 0 else '', ' disabled' if n == len(chosen) - 1 else '', id=e['id']))
-    el('selected').innerHTML = ''.join(rows) or '<li class="empty">Noch nichts ausgewählt: Folgen in der Liste anklicken.</li>'
+    el('selected').innerHTML = ''.join(rows) or ('<li class="empty">Es ist noch nichts ausgewählt. Klicke in der Liste auf Folgen, '
+                                                  'um sie hinzuzufügen.</li>')
     count = el('jump-count')       # the number of selected episodes, also on the floating "down" button
     count.textContent = str(len(chosen))
     count.hidden = not chosen
-    el('to-bottom').title = 'ganz nach unten' + (' ({} ausgewählt)'.format(len(chosen)) if chosen else '')
+    el('to-bottom').title = 'nach unten zum Speichern' + (' ({} ausgewählt)'.format(len(chosen)) if chosen else '')
 
     seconds = sum(e['duration'] for e in chosen)
     f = maus.factor(seconds, len(chosen))
@@ -175,7 +177,7 @@ def render_selection():
     el('over').style.left = '{}%'.format(100 * maus.TARGET / scale)
     el('over').style.width = '{}%'.format(100 * max(0, seconds - maus.TARGET) / scale)
     el('mark').style.left = 'calc({}% - 1px)'.format(100 * maus.TARGET / scale)
-    el('sum').textContent = 'Zusammen {}, auf den Tonie passen {}.'.format(maus.minutes(seconds), maus.minutes(maus.TARGET)) if chosen else ''
+    el('sum').textContent = maus.total_text(seconds, len(chosen)) if chosen else ''
     level, text = maus.verdict(f)
     el('verdict').className = 'verdict ' + level
     el('verdict').textContent = text if chosen else ''
@@ -271,7 +273,7 @@ async def start():
         js.console.error(str(error))
     if not state['episodes']:
         el('episodes').innerHTML = ('<li class="note">Die ARD Audiothek antwortet gerade nicht. '
-                                    'Bitte später noch einmal versuchen.</li>')
+                                    'Bitte versuche es später noch einmal.</li>')
         el('convert').textContent = 'Keine Folgen'
         return
     state['by_id'] = {e['id']: e for e in state['episodes']}
@@ -307,7 +309,7 @@ async def download(episode, row, limit):
             except Exception as error:
                 js.console.warn('download {}: {}'.format(episode['url'], error))
                 if attempt == 2:
-                    raise RuntimeError('„{}“ ließ sich nicht vom WDR-Server laden. Bitte später noch einmal versuchen.'.format(
+                    raise RuntimeError('„{}“ ließ sich nicht vom WDR-Server laden. Bitte versuche es später noch einmal.'.format(
                         episode['title']))
                 progress(row, 0, 'neuer Versuch ...')
                 await asyncio.sleep(2)
@@ -368,7 +370,7 @@ async def convert_on(worker, jobs, f):
         if code != 0:
             js.console.error(log)
             raise RuntimeError('ffmpeg konnte „{}“ nicht umrechnen.'.format(job['episode']['title']))
-        progress(job['row'], 1, 'fertig ({})'.format(maus.clock(out_seconds)), done=True)
+        progress(job['row'], 1, 'fertig ({})'.format(maus.minutes(out_seconds)), done=True)
 
 
 def offer(name, data, note):
@@ -404,13 +406,13 @@ async def convert():
             limit = asyncio.Semaphore(DOWNLOADS)
             datas = await asyncio.gather(*[download(e, n, limit) for n, e in enumerate(chosen)])
             for n, (e, data) in enumerate(zip(chosen, datas)):
-                progress(n, 1, 'fertig ({})'.format(maus.clock(e['duration'])), done=True)
-                offer(maus.file_name(e, n + 1), data, maus.clock(e['duration']))
+                progress(n, 1, 'fertig ({})'.format(maus.minutes(e['duration'])), done=True)
+                offer(maus.file_name(e, n + 1), data, maus.minutes(e['duration']))
         else:
             await convert_all(chosen, single, workers)
         done = js.document.createElement('p')
         done.className = 'hint'
-        done.textContent = 'Die Dateien dann wie gewohnt über die Tonie-App oder my.tonies.com auf den Kreativ-Tonie laden.'
+        done.textContent = 'Lade die Dateien dann wie gewohnt über die Tonie-App oder my.tonies.com auf deinen Kreativ-Tonie.'
         el('downloads').appendChild(done)
     except Exception as error:
         js.console.error(str(error))
@@ -460,27 +462,27 @@ async def convert_all(chosen, single, workers):
         jobs[n % len(workers)].append({'row': n, 'episode': e, 'source': source, 'seconds': measured, 'worker': worker,
                                        'target': 'out{}.mp3'.format(n), 'name': maus.file_name(e, n + 1)})
     f = maus.factor(seconds, len(chosen), measured=True)
-    el('verdict').textContent = maus.verdict(f)[1] + ' (gemessen: zusammen {})'.format(maus.minutes(seconds))
+    el('verdict').textContent = 'Genau gemessen dauern die Folgen zusammen {}. '.format(maus.minutes(seconds)) + maus.verdict(f, final=True)[1]
     everything = sorted((job for share in jobs for job in share), key=lambda job: job['row'])
 
     if f == 1 and single and maus.joinable(formats):
         # nothing to convert: the WDR files are joined as they are, which takes seconds
         for job in everything:
-            progress(job['row'], 1, 'fertig ({})'.format(maus.clock(job['seconds'])), done=True)
+            progress(job['row'], 1, 'fertig ({})'.format(maus.minutes(job['seconds'])), done=True)
         await join(workers[0], everything, 'source', chosen, seconds, join_row)
         return
     if f == 1 and single:
         # different sample rates or channels: mp3 files like that cannot simply be put one after the other
         info = js.document.createElement('li')
         info.className = 'info'
-        info.textContent = ('Die Folgen haben unterschiedliche Audioformate ({}). Sie werden deshalb einmal umgerechnet, '
-                            'das dauert etwas länger als das reine Zusammenfügen.'.format(maus.describe_formats(formats)))
+        info.textContent = ('Die Folgen haben unterschiedliche Audioformate ({}). Sie werden deshalb einmal umgerechnet. '
+                            'Das dauert etwas länger als das reine Zusammenfügen.'.format(maus.describe_formats(formats)))
         el('progress').prepend(info)
 
     await asyncio.gather(*[convert_on(worker, share, f) for worker, share in zip(workers, jobs)])
     if not single:
         for job in everything:
-            offer(job['name'], await job['worker']['ff'].readFile(job['target']), maus.clock(job['seconds'] / f))
+            offer(job['name'], await job['worker']['ff'].readFile(job['target']), maus.minutes(job['seconds'] / f))
         return
     await join(workers[0], everything, 'target', chosen, seconds / f, join_row)
 
@@ -497,5 +499,5 @@ async def join(first, jobs, key, chosen, seconds, row):
     if code != 0:
         js.console.error(log)
         raise RuntimeError('ffmpeg konnte die Teile nicht zusammenfügen.')
-    progress(row, 1, 'fertig ({})'.format(maus.clock(seconds)), done=True)
-    offer(name, await first['ff'].readFile('mix.mp3'), maus.clock(seconds))
+    progress(row, 1, 'fertig ({})'.format(maus.minutes(seconds)), done=True)
+    offer(name, await first['ff'].readFile('mix.mp3'), maus.minutes(seconds))
