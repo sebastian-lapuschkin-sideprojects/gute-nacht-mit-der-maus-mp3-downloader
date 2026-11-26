@@ -6,6 +6,8 @@ Since the COVID-19 pandemic of 2020, there is also a series of freely streamable
 
 For some weird reason however, in germany publicly funded and freely available media gets depublished after (approximately) one week of online availability. In the past, I have tried to keep track of the newly published episodes, but some slipped between my fingers. I therefore set out to create this small automation tool (which can be run as a cron job, for example) to automatically collect and download any newly appearing mp3 audio files.
 
+With the newest iteration of this project (and my son's age-related loss of keen interest in Maus content), I shifted the focus from data preservation to tool usability and the publication as a readily available web service via GitHub Pages.
+
 ## In the browser: "Die Maus auf dem Tonie"
 
 **https://sebastian-lapuschkin-sideprojects.github.io/gute-nacht-mit-der-maus-mp3-downloader/**
